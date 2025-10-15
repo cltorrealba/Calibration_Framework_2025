@@ -1,0 +1,2 @@
+Proxy for search-space reduction: average reduction in free parameters (Stage I -> Stage II) = 1.598
+Parameter bounds not provided in dataset; product-of-bounds proxy not computed.
