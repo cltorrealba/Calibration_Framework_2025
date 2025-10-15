@@ -1,0 +1,4 @@
+index,mean_stageI_all,mean_stageII_sel,delta_pct_sel_vs_all
+Akaike,1083.279,3.452,-99.68
+MeanCC,0.954,0.08,-91.58
+Fobj,0.226,0.215,-4.65
