@@ -1,0 +1,1 @@
+cannot import name '_lazywhere' from 'scipy._lib._util' (C:\Users\ctorrealba\AppData\Local\anaconda3\envs\Data_Science\Lib\site-packages\scipy\_lib\_util.py)

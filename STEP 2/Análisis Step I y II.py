@@ -11,6 +11,8 @@ Created on Thu May  8 09:58:24 2025
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.ticker import PercentFormatter
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -22,6 +24,10 @@ import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
 sns.set_theme(style='whitegrid')
+# PDF export settings (LaTeX-friendly)
+mpl.rcParams['pdf.fonttype'] = 42  # TrueType fonts in PDF
+mpl.rcParams['ps.fonttype'] = 42
+mpl.rcParams['savefig.transparent'] = True
 PAL_GRAY = sns.color_palette('colorblind')[7]
 PAL_BLUE = sns.color_palette('colorblind')[0]
 PAL_3    = sns.color_palette('colorblind')[5]
@@ -624,11 +630,209 @@ plt.close(figF)
 
 
 # ========================================================================== #
+# 2quinquies. STAGE II RETENTION VS n_fixed (KNEE PLOT)                     #
+# ========================================================================== #
+# Exact per-integer n_free (estim_params) retention: Stage I denominator, Stage II numerator
+grp_all = df_all.groupby('estim_params').size().rename('N_all')
+grp_sel = stage2.groupby('estim_params').size().rename('N_retained')
+ret_by_nfree = pd.concat([grp_all, grp_sel], axis=1).fillna(0).astype(int).reset_index()\
+                  .rename(columns={'estim_params':'n_free'})
+ret_by_nfree['retention'] = ret_by_nfree['N_retained'] / ret_by_nfree['N_all'].replace(0, np.nan)
+
+def wilson_ci(k, n, z=1.96):
+    if n <= 0:
+        return (np.nan, np.nan)
+    p = k/n
+    den = 1 + z**2/n
+    center = (p + z**2/(2*n)) / den
+    half = z * np.sqrt(p*(1-p)/n + z**2/(4*n**2)) / den
+    lo = max(0.0, center - half)
+    hi = min(1.0, center + half)
+    return (lo, hi)
+
+# Compute Wilson CI on the n_free table
+cis = ret_by_nfree.apply(lambda r: wilson_ci(r['N_retained'], r['N_all']), axis=1, result_type='expand')
+ret_by_nfree['ci_lo'] = cis[0]
+ret_by_nfree['ci_hi'] = cis[1]
+
+# Knee (elbow) detection: farthest point from the line connecting endpoints
+def knee_point(xs, ys):
+    xs = np.asarray(xs, dtype=float)
+    ys = np.asarray(ys, dtype=float)
+    if xs.size < 3:
+        return None
+    x0, y0 = xs[0], ys[0]
+    x1, y1 = xs[-1], ys[-1]
+    # line vector
+    vx, vy = x1 - x0, y1 - y0
+    norm = np.hypot(vx, vy)
+    if norm == 0:
+        return None
+    # distances of each point to the line
+    dists = np.abs(vy*(xs - x0) - vx*(ys - y0)) / norm
+    idx = int(np.argmax(dists))
+    return idx
+
+ret_by_nfree = ret_by_nfree.sort_values('n_free').reset_index(drop=True)
+knee_idx = knee_point(ret_by_nfree['n_free'], ret_by_nfree['retention'])
+ret_by_nfree['is_knee'] = False
+if knee_idx is not None:
+    ret_by_nfree.loc[knee_idx, 'is_knee'] = True
+
+# Export CSV with Stage II Fobj stats by n_free (mean, std, n, 95% CI)
+ret_by_out = ret_by_nfree.copy()
+fobj_stats = (
+    stage2.groupby('estim_params')['Fobj']
+          .agg(Fobj_mean='mean', Fobj_std='std', Fobj_n='count')
+          .reset_index()
+          .rename(columns={'estim_params':'n_free'})
+)
+ret_by_out = ret_by_out.merge(fobj_stats, on='n_free', how='left')
+# 95% CI for the mean (normal approx)
+z = 1.96
+ret_by_out['Fobj_se'] = ret_by_out['Fobj_std'] / np.sqrt(ret_by_out['Fobj_n'].replace(0, np.nan))
+ret_by_out['Fobj_ci_lo'] = ret_by_out['Fobj_mean'] - z * ret_by_out['Fobj_se']
+ret_by_out['Fobj_ci_hi'] = ret_by_out['Fobj_mean'] + z * ret_by_out['Fobj_se']
+
+ret_by_out['retention_pct'] = (100*ret_by_out['retention']).round(2)
+ret_by_out['ci_lo_pct'] = (100*ret_by_out['ci_lo']).round(2)
+ret_by_out['ci_hi_pct'] = (100*ret_by_out['ci_hi']).round(2)
+ret_by_out.to_csv(os.path.join('salidas','retention_by_nfree_counts.csv'), index=False)
+
+# Plot
+figK, axK = plt.subplots(figsize=(7.5, 4.2))
+# Plot range restriction to focus on reliable sample sizes
+min_free, max_free = 3, 9
+mask_plot = (ret_by_out['n_free'] >= min_free) & (ret_by_out['n_free'] <= max_free)
+ret_plot = ret_by_out[mask_plot].copy()
+if ret_plot.empty:
+    # Fallback to all if range not available
+    ret_plot = ret_by_out.copy()
+    min_free = int(ret_plot['n_free'].min())
+    max_free = int(ret_plot['n_free'].max())
+
+x = ret_plot['n_free'].to_numpy(dtype=float)
+y = ret_plot['retention'].to_numpy(dtype=float)
+ylo = ret_plot['ci_lo'].to_numpy(dtype=float)
+yhi = ret_plot['ci_hi'].to_numpy(dtype=float)
+
+# Curve and points (no retention shading)
+axK.plot(x, y, color=PAL_BLUE, linewidth=2, label='Retention')
+axK.scatter(x, y, color=PAL_BLUE, s=45, zorder=3)
+
+# Knee annotation (visual only; no legend label) — recompute on filtered data
+knee_idx_plot = knee_point(x, y)
+if knee_idx_plot is not None:
+    kx = x[knee_idx_plot]; ky = y[knee_idx_plot]
+    axK.scatter([kx], [ky], color='orange', edgecolors='black', s=120, marker='*', zorder=4, label='_nolegend_')
+    axK.axvline(kx, color='orange', linestyle=':', linewidth=1)
+
+# Secondary axis: Fobj mean (Stage II) by n_free with 95% CI shading
+axK2 = axK.twinx()
+fobj_mean = ret_plot['Fobj_mean'].to_numpy(dtype=float)
+fobj_lo = ret_plot['Fobj_ci_lo'].to_numpy(dtype=float)
+fobj_hi = ret_plot['Fobj_ci_hi'].to_numpy(dtype=float)
+axK2.fill_between(x, fobj_lo, fobj_hi, color=PAL_3, alpha=0.18, linewidth=0)
+axK2.plot(x, fobj_mean, color=PAL_3, linewidth=1.8, marker='o', alpha=0.95, label='Fobj (mean)')
+axK2.set_ylabel('Fobj (mean)')
+
+axK.set_xlabel('Number of Free Parameters (n_free)')
+axK.set_ylabel('Retention (share kept)')
+axK.set_title('Stage II – Retention vs number of free parameters')
+axK.set_xticks(list(ret_plot['n_free'].astype(int).to_list()))
+axK.set_ylim(0, 1.0)
+axK.yaxis.set_major_formatter(PercentFormatter(1.0))
+axK.grid(True, axis='y', alpha=0.25)
+# Combined legend (upper-left)
+handles1, labels1 = axK.get_legend_handles_labels()
+handles2, labels2 = axK2.get_legend_handles_labels()
+axK.legend(handles1 + handles2, labels1 + labels2, loc='upper left', frameon=False)
+figK.tight_layout()
+os.makedirs(os.path.join('salidas','figs'), exist_ok=True)
+figK.savefig(os.path.join('salidas','figs','stage2_retention_knee_nfree.png'), dpi=350)
+figK.savefig(os.path.join('salidas','figs','stage2_retention_knee_nfree.pdf'), dpi=350, bbox_inches='tight')
+plt.close(figK)
+
+# Export knee-related metrics associated to the figure
+try:
+    os.makedirs('salidas', exist_ok=True)
+    ret_plot = ret_plot.copy()
+    ret_plot['is_knee_plot'] = False
+    if knee_idx_plot is not None and len(ret_plot) > 0:
+        knee_pos = int(knee_idx_plot)
+        ret_plot.at[ret_plot.index[knee_pos], 'is_knee_plot'] = True
+        knee_row = ret_plot.iloc[knee_pos]
+        knee_n_free = int(knee_row['n_free']) if not pd.isna(knee_row['n_free']) else np.nan
+        # Local slopes for retention around knee (finite differences)
+        idx = knee_pos
+        slope_left = np.nan
+        slope_right = np.nan
+        if idx-1 >= 0:
+            slope_left = (ret_plot.iloc[idx]['retention'] - ret_plot.iloc[idx-1]['retention']) / (ret_plot.iloc[idx]['n_free'] - ret_plot.iloc[idx-1]['n_free'])
+        if idx+1 < len(ret_plot):
+            slope_right = (ret_plot.iloc[idx+1]['retention'] - ret_plot.iloc[idx]['retention']) / (ret_plot.iloc[idx+1]['n_free'] - ret_plot.iloc[idx]['n_free'])
+        # Correlations in plot range
+        rho_ret = pd.Series(ret_plot['n_free']).corr(ret_plot['retention'], method='spearman')
+        rho_fobj = pd.Series(ret_plot['n_free']).corr(ret_plot['Fobj_mean'], method='spearman')
+        summary = pd.DataFrame([
+            {
+                'range_min_n_free': int(min_free),
+                'range_max_n_free': int(max_free),
+                'knee_n_free': knee_n_free,
+                'knee_retention': float(knee_row['retention']),
+                'knee_retention_ci_lo': float(knee_row['ci_lo']),
+                'knee_retention_ci_hi': float(knee_row['ci_hi']),
+                'knee_N_all': int(knee_row['N_all']) if not pd.isna(knee_row['N_all']) else np.nan,
+                'knee_N_retained': int(knee_row['N_retained']) if not pd.isna(knee_row['N_retained']) else np.nan,
+                'knee_Fobj_mean': float(knee_row['Fobj_mean']),
+                'knee_Fobj_ci_lo': float(knee_row['Fobj_ci_lo']) if not pd.isna(knee_row['Fobj_ci_lo']) else np.nan,
+                'knee_Fobj_ci_hi': float(knee_row['Fobj_ci_hi']) if not pd.isna(knee_row['Fobj_ci_hi']) else np.nan,
+                'knee_Fobj_n': int(knee_row['Fobj_n']) if not pd.isna(knee_row['Fobj_n']) else np.nan,
+                'spearman_rho_nfree_retention': float(rho_ret) if not pd.isna(rho_ret) else np.nan,
+                'spearman_rho_nfree_fobjmean': float(rho_fobj) if not pd.isna(rho_fobj) else np.nan,
+                'retention_slope_left': float(slope_left) if slope_left == slope_left else np.nan,
+                'retention_slope_right': float(slope_right) if slope_right == slope_right else np.nan
+            }
+        ])
+    else:
+        summary = pd.DataFrame([
+            {
+                'range_min_n_free': int(min_free),
+                'range_max_n_free': int(max_free),
+                'knee_n_free': np.nan,
+                'knee_retention': np.nan,
+                'knee_retention_ci_lo': np.nan,
+                'knee_retention_ci_hi': np.nan,
+                'knee_N_all': np.nan,
+                'knee_N_retained': np.nan,
+                'knee_Fobj_mean': np.nan,
+                'knee_Fobj_ci_lo': np.nan,
+                'knee_Fobj_ci_hi': np.nan,
+                'knee_Fobj_n': np.nan,
+                'spearman_rho_nfree_retention': np.nan,
+                'spearman_rho_nfree_fobjmean': np.nan,
+                'retention_slope_left': np.nan,
+                'retention_slope_right': np.nan
+            }
+        ])
+    # Save summary and plot-range table
+    summary.to_csv(os.path.join('salidas','stage2_knee_summary.csv'), index=False)
+    ret_plot.to_csv(os.path.join('salidas','retention_by_nfree_counts_plotrange.csv'), index=False)
+except Exception as e:
+    print(f"[WARN] Could not export knee summary: {e}")
+
+
+# ========================================================================== #
 # 3. FIGURE 2 – Complexity-stratified grid (FixFreq | PCA | Heat-map)         #
 # ========================================================================== #
-tiers = sorted(stage2['estim_params'].unique(), reverse=True)
+tiers_all = sorted(stage2['estim_params'].unique(), reverse=True)
+# Exclude rows (tiers) with 9 and 3 free parameters to reduce figure height
+exclude_tiers = {9, 3}
+tiers = [t for t in tiers_all if t not in exclude_tiers]
 n_rows = len(tiers)
-fig2, axes = plt.subplots(n_rows, 3, figsize=(18, 4.5*n_rows),
+# Slightly reduce per-row height for a more compact grid
+row_height = 4.0
+fig2, axes = plt.subplots(n_rows, 3, figsize=(18, row_height*n_rows),
                           gridspec_kw={'hspace':0.35,'wspace':0.28})
 if n_rows == 1:
     axes = axes.reshape(1,3)
@@ -715,3 +919,10 @@ for r, n_par in enumerate(tiers):
 
 fig2.tight_layout()
 fig2.savefig('figure2_complexity_grid.png', dpi=350)
+os.makedirs('salidas/figs', exist_ok=True)
+pdf_path = os.path.join('salidas','figs','stage2_Fig_complexity_grid.pdf')
+try:
+    fig2.savefig(pdf_path, format='pdf', bbox_inches='tight')
+except PermissionError:
+    # write with a versioned name if previous is open
+    fig2.savefig(os.path.join('salidas','figs','stage2_Fig_complexity_grid_v2.pdf'), format='pdf', bbox_inches='tight')
