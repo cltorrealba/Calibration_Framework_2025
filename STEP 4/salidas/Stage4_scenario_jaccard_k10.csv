@@ -1,0 +1,11 @@
+scenario_a,scenario_b,jaccard,intersect,union
+No-priority,Parsimony,0.6666666666666666,8,12
+No-priority,Goodness-of-fit,0.5384615384615384,7,13
+No-priority,Identifiability,0.6666666666666666,8,12
+No-priority,Sensitivity,0.0,0,20
+Parsimony,Goodness-of-fit,0.6666666666666666,8,12
+Parsimony,Identifiability,0.42857142857142855,6,14
+Parsimony,Sensitivity,0.0,0,20
+Goodness-of-fit,Identifiability,0.42857142857142855,6,14
+Goodness-of-fit,Sensitivity,0.0,0,20
+Identifiability,Sensitivity,0.0,0,20

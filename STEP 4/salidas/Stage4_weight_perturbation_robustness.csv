@@ -1,0 +1,6 @@
+scenario,prob_winner_change,prob_topk_change
+No-priority,0.0,0.07
+Parsimony,0.0,0.195
+Goodness-of-fit,0.0,0.0
+Identifiability,0.46,0.0
+Sensitivity,0.0,0.0
