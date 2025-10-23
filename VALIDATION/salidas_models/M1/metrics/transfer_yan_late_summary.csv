@@ -1,0 +1,2 @@
+model_id,yan_late_bias_mean,yan_late_bias_std,mae_percent_median_mean,mae_percent_median_std,ecp_10_90_mean,ecp_10_90_std,band_width_norm_mean,band_width_norm_std
+1,3.6310647173019686e-07,1.1905847080156936e-07,9.203499959322656,4.382094434017664,0.25396825396825395,0.04489566864676492,0.0163499982173338,0.009990640238991955

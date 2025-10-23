@@ -1,8 +1,12 @@
+import os
 import numpy as np
 # from Carga_datos_v1 import DataLoad
 from Carga_datos import DataLoad
 from model_ci_loader import load_model_params
 from Simulador_kfixed import resimulate_optimal
+
+def is_quiet() -> bool:
+    return str(os.getenv('PIPELINE_QUIET', '0')).lower() in ('1', 'true', 'yes')
 
 def simulate_kfixed_model(model_id: int,
                             scale_id: int,
@@ -11,32 +15,38 @@ def simulate_kfixed_model(model_id: int,
 
      # 1) Cargar datos experimentales
     Km, Tpair, Measure_idx, fda_pair, _ = DataLoad(scale_id, exper_id)
-    print(f"\n>> DEBUG simulate_kfixed_model:")
-    print(f"   fda_pair      = {fda_pair}")
-    print(f"   Tpair.shape   = {Tpair.shape}")
-    print(f"   Measure_idx   = {Measure_idx} (len={len(Measure_idx)})")
+    if not is_quiet():
+        print(f"\n>> DEBUG simulate_kfixed_model:")
+        print(f"   fda_pair      = {fda_pair}")
+        print(f"   Tpair.shape   = {Tpair.shape}")
+        print(f"   Measure_idx   = {Measure_idx} (len={len(Measure_idx)})")
     
     # 2) Parámetros operacionales: densidad y tiempo de adición
 
     rho_dap, time_dap = fda_pair
     sample_times = Tpair[Measure_idx, 0]
-    print(f"   sample_times  = {sample_times}")
-    print(f"   time_dap      = {time_dap:.3f}")
+    if not is_quiet():
+        print(f"   sample_times  = {sample_times}")
+        print(f"   time_dap      = {time_dap:.3f}")
     
     diffs = np.abs(sample_times - time_dap)
     FDA_add_idx = np.argmin(diffs)
-    print(f"   >> DEBUG: FDA_add_idx = {FDA_add_idx}, "
-          f"sample_times[{FDA_add_idx}] = {sample_times[FDA_add_idx]:.3f}, "
-      f"Δ = {diffs[FDA_add_idx]:.3f}")
+    if not is_quiet():
+        print(f"   >> DEBUG: FDA_add_idx = {FDA_add_idx}, "
+              f"sample_times[{FDA_add_idx}] = {sample_times[FDA_add_idx]:.3f}, "
+          f"Δ = {diffs[FDA_add_idx]:.3f}")
     int_time, exp_temp = Tpair[:,0], Tpair[:,1]
 
 
     # 3) Determinar FDA_add_idx sobre los tiempos cinéticos
     sample_times = Tpair[Measure_idx, 0]   # == k_time
     if diffs[FDA_add_idx] > 1e-6:
-        print(f"Warning: DAP time {time_dap:.3f} h matched to "
-              f"kinetics time {sample_times[FDA_add_idx]:.3f} h "
-              f"(Δ={diffs[FDA_add_idx]:.3f} h)")
+        if not is_quiet():
+            print(
+                f"Warning: DAP time {time_dap:.3f} h matched to "
+                f"kinetics time {sample_times[FDA_add_idx]:.3f} h "
+                f"(Δ={diffs[FDA_add_idx]:.3f} h)"
+            )
 
     # 4) Corrección de YAN "estancada"
     Stuck_YANs = np.loadtxt('Stuck_YANs.txt')
@@ -48,8 +58,11 @@ def simulate_kfixed_model(model_id: int,
     diffs        = np.abs(sample_times - time_dap)
     idx_closest  = np.argmin(diffs)
     FDA_add_idx  = idx_closest   # <-- ¡índice relativo a Km!
-    if diffs[idx_closest] > 0.1:
-        print(f"Warning: DAP time {time_dap:.3f}h matched to measurement time " f"{sample_times[idx_closest]:.3f}h (Δ={diffs[idx_closest]:.3f}h)")
+    if diffs[idx_closest] > 0.1 and not is_quiet():
+        print(
+            f"Warning: DAP time {time_dap:.3f}h matched to measurement time "
+            f"{sample_times[idx_closest]:.3f}h (Δ={diffs[idx_closest]:.3f}h)"
+        )
         
      # 5) Condición inicial
     x0 = np.array([
@@ -64,10 +77,11 @@ def simulate_kfixed_model(model_id: int,
     flags, p_opt, CI_95 = load_model_params(model_id, scale_id)
 
     # ───── DEBUG ────────────────────────────────────────────────────────────────
-    print(f"[DEBUG simulate] model_id={model_id}, scale_id={scale_id}")
-    print("  flags:", flags, type(flags), flags.dtype if hasattr(flags, 'dtype') else None)
-    print("  p_opt:", p_opt, type(p_opt), p_opt.dtype if hasattr(p_opt, 'dtype') else None)
-    print("  CI_95:", CI_95, type(CI_95))
+    if not is_quiet():
+        print(f"[DEBUG simulate] model_id={model_id}, scale_id={scale_id}")
+        print("  flags:", flags, type(flags), flags.dtype if hasattr(flags, 'dtype') else None)
+        print("  p_opt:", p_opt, type(p_opt), p_opt.dtype if hasattr(p_opt, 'dtype') else None)
+        print("  CI_95:", CI_95, type(CI_95))
     # ─────────────────────────────────────────────────────────────────────────────
      # 7) Construir kfixed y k_free
     kfixed = np.where(flags==1, kfixed_0, np.nan)

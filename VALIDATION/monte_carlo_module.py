@@ -102,7 +102,8 @@ def plot_simulation_ensemble(T, X_ensemble, ctx,
                              exper_id=None,
                              is_primary=True,
                              exp_marker='o',
-                             color=None):
+                             color=None,
+                             variables=None):
     """
     Plots:
       - Median curve (with R² in legend when experimental data exist)
@@ -116,46 +117,43 @@ def plot_simulation_ensemble(T, X_ensemble, ctx,
     median = np.percentile(X_ensemble, percentiles[1], axis=0)
     upper  = np.percentile(X_ensemble, percentiles[2], axis=0)
 
-    labels    = ['Biomass', 'YAN', 'Glucose', 'Fructose', 'Ethanol', 'Temperature']
+    all_labels = ['Biomass', 'YAN', 'Glucose', 'Fructose', 'Ethanol', 'Temperature']
+    labels = all_labels if variables is None else list(variables)
     t_full    = ctx['Tpair'][:, 0]
     t_samples = ctx['Tpair'][ctx['Measure_idx'], 0]
     Km        = ctx['Km']
     T_f       = ctx['Tpair'][:, 1]
 
     if fig_ax is None:
-        fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-        ax_array  = axes.flatten()
+        # Dynamic grid based on number of variables requested
+        nplots = len(labels)
+        if nplots <= 3:
+            nrows, ncols = 1, nplots
+        elif nplots == 4:
+            nrows, ncols = 2, 2
+        else:
+            # fallback to 2x3 layout
+            nrows, ncols = 2, 3
+        fig, axes = plt.subplots(nrows, ncols, figsize=(5*ncols, 4*nrows))
+        ax_array  = np.atleast_1d(axes).flatten()
     else:
         fig, ax_array = fig_ax
 
-    for j, label in enumerate(labels):
-        ax = ax_array[j]
+    # Map from label to index in X_ensemble (Temperature is special)
+    label_to_idx = {
+        'Biomass': 0,
+        'YAN': 1,
+        'Glucose': 2,
+        'Fructose': 3,
+        'Ethanol': 4,
+    }
+
+    for i_plot, label in enumerate(labels):
+        ax = ax_array[i_plot]
 
         if label == 'Temperature':
-            # experimental vs full profile
-            t_s = t_samples
-            T_s = ctx['Tpair'][ctx['Measure_idx'], 1]
-
-            # R² for temperature
-            y_pred = np.interp(t_s, t_full, T_f)
-            y_true = T_s
-            ss_res = np.sum((y_true - y_pred)**2)
-            ss_tot = np.sum((y_true - y_true.mean())**2)
-            r2_temp = 1 - ss_res/ss_tot
-
-            # plot profile with R² in legend
-            ax.plot(t_full, T_f,
-                    color=color,
-                    label=f'{label_prefix} perfil (R²={r2_temp:.2f})',
-                    lw=2)
-            # experimental points
-            if is_primary:
-                ax.plot(t_s, T_s,
-                        linestyle='',
-                        marker=exp_marker,
-                        color=color,
-                        label=f'Temp exp E{exper_id}')
-
+            # Plot only the temperature profile without legend nor experimental points
+            ax.plot(t_full, T_f, color=color, lw=2)
         else:
             # compute R² only for variables with data
             if label == 'YAN':
@@ -169,35 +167,22 @@ def plot_simulation_ensemble(T, X_ensemble, ctx,
 
             r2_val = None
             if y_true is not None:
+                j = label_to_idx[label]
                 y_pred = np.interp(t_samples, t_full, median[:, j])
                 ss_res = np.sum((y_true - y_pred)**2)
                 ss_tot = np.sum((y_true - y_true.mean())**2)
                 r2_val = 1 - ss_res/ss_tot
 
             # plot median with or without R²
-            if r2_val is not None:
-                median_label = f'{label_prefix} median (R²={r2_val:.2f})'
-            else:
-                median_label = f'{label_prefix} median'
-
-            ax.plot(t_full, median[:, j],
-                    color=color,
-                    label=median_label,
-                    lw=2)
+            j = label_to_idx[label]
+            median_label = f'{label_prefix} median (R²={r2_val:.2f})' if r2_val is not None else f'{label_prefix} median'
+            ax.plot(t_full, median[:, j], color=color, label=median_label, lw=2)
             # fill CI without legend
-            ax.fill_between(t_full,
-                            lower[:, j],
-                            upper[:, j],
-                            color=color,
-                            alpha=0.3)
+            ax.fill_between(t_full, lower[:, j], upper[:, j], color=color, alpha=0.3)
 
             # experimental points
             if is_primary and y_true is not None:
-                ax.scatter(t_samples, y_true,
-                           marker=exp_marker,
-                           edgecolor=color,
-                           facecolor='white',
-                           s=50,
+                ax.scatter(t_samples, y_true, marker=exp_marker, edgecolor=color, facecolor='white', s=50,
                            label=f'{label} exp E{exper_id}')
 
         ax.set_title(label)

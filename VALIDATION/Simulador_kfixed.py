@@ -1,5 +1,9 @@
+import os
 import numpy as np
 from scipy.integrate import solve_ivp
+
+def is_quiet() -> bool:
+    return str(os.getenv('PIPELINE_QUIET', '0')).lower() in ('1', 'true', 'yes')
 
 # ---------------------------------------------------------------
 # re_simulate_zenteno with vectorized p_all reconstruction
@@ -18,7 +22,7 @@ def zenteno_rhs(t, x, k_free, int_time, exp_temp, kfixed):
     p_all[mask_free] = k_free
 
     # 3) interpolate temp (°C -> K)
-    T_K = np.interp(t, int_time, exp_temp) + 273.15
+    T_K = float(np.interp(t, int_time, exp_temp)) + 273.15
 
     # 4) enforce non-negativity
     X, N, G, F, E = np.maximum(x, 0)
@@ -36,6 +40,7 @@ def zenteno_rhs(t, x, k_free, int_time, exp_temp, kfixed):
     m0 = 0.01
 
     # 7) constitutive rates
+    eps = 1e-12
     mu_max = mu0 * np.exp(Eac * (T_K - 300) / (300 * R * T_K))
     betaG_max = betaG0 * np.exp(Eafe * (T_K - 296.15) / (296.15 * R * T_K))
     betaF_max = betaF0 * np.exp(Eafe * (T_K - 296.15) / (296.15 * R * T_K))
@@ -46,20 +51,31 @@ def zenteno_rhs(t, x, k_free, int_time, exp_temp, kfixed):
     Kie = Kie0 * np.exp(EaK * (T_K - 293.15) / (293.15 * R * T_K))
     m = m0 * np.exp(Eam * (T_K - 293.3) / (293.3 * R * T_K))
 
-    mu = mu_max * (N / (N + Kn))
-    beta_G = betaG_max * (G / (G + Kg)) * (Kie / (E + Kie))
-    beta_F = betaF_max * (F / (F + Kf)) * (Kig / (G + Kig)) * (Kie / (E + Kie))
+    # Safe denominators to avoid division by zero
+    mu = mu_max * (N / (N + Kn + eps))
+    beta_G = betaG_max * (G / (G + Kg + eps)) * (Kie / (E + Kie + eps))
+    beta_F = betaF_max * (F / (F + Kf + eps)) * (Kig / (G + Kig + eps)) * (Kie / (E + Kie + eps))
 
     Td = -0.0001 * E**3 + 0.0049 * E**2 - 0.1279 * E + 315.89
     Kd0 = 0.00044
     Kd = (Kd0 * np.exp((Cde * E) + (Etd * (T_K - 305.65)) / (305.65 * R * T_K))
           if T_K >= Td else 0)
 
-    # 8) ODEs
+    # 8) ODEs (epsilon-safe divisions)
+    # Clip yields to avoid division by zero
+    Yxn = max(Yxn, eps)
+    Yxg = max(Yxg, eps)
+    Yxf = max(Yxf, eps)
+    Yeg = max(Yeg, eps)
+    Yef = max(Yef, eps)
+
     dXdt = mu * X - Kd * X
     dNdt = -mu * (X / Yxn)
-    dGdt = -((mu / Yxg) + (beta_G / Yeg) + m * (G / (G + F))) * X
-    dFdt = -((mu / Yxf) + (beta_F / Yef) + m * (F / (G + F))) * X
+    denom_GF = max(G + F, eps)
+    ratioG = G / denom_GF
+    ratioF = F / denom_GF
+    dGdt = -((mu / Yxg) + (beta_G / Yeg) + m * ratioG) * X
+    dFdt = -((mu / Yxf) + (beta_F / Yef) + m * ratioF) * X
     dEdt = (beta_G + beta_F) * X
 
     return [dXdt, dNdt, dGdt, dFdt, dEdt]
@@ -80,14 +96,16 @@ def resimulate_optimal(k_free, x0, time_dap, int_time, exp_temp,
         raise ValueError(f"Invalid DAP split: t1={t1.size}, t2={t2.size}")
 
     # Stage 1: before DAP
-    print(f"\n>> DEBUG resimulate_optimal:")
-    print(f"   t1[0] = {t1[0]:.3f}, t1[-1] = {t1[-1]:.3f}, len(t1) = {len(t1)}")
+    if not is_quiet():
+        print(f"\n>> DEBUG resimulate_optimal:")
+        print(f"   t1[0] = {t1[0]:.3f}, t1[-1] = {t1[-1]:.3f}, len(t1) = {len(t1)}")
     sol1 = solve_ivp(
         lambda t, y: zenteno_rhs(t, y, k_free, int_time, exp_temp, kfixed),
         (t1[0], t1[-1]), x0,
         method='BDF', dense_output=True
     )
-    print(f"   sol1.y.shape = {sol1.y.shape}")
+    if not is_quiet():
+        print(f"   sol1.y.shape = {sol1.y.shape}")
 
     y1 = sol1.sol(t1).T
 
@@ -96,9 +114,11 @@ def resimulate_optimal(k_free, x0, time_dap, int_time, exp_temp,
     # dosis a partir de la fila cinética correcta
     dose_mgL = Kinetic_Matrix[FDA_add_idx, 3]     # mg/L
     dose_gL  = dose_mgL / 1000.0
-    print(f"   >> Inyectando {dose_gL:.3f} g/L YAN en fila {FDA_add_idx}")
+    if not is_quiet():
+        print(f"   >> Inyectando {dose_gL:.3f} g/L YAN en fila {FDA_add_idx}")
     x02[1] += dose_gL
-    print(f"   >> DEBUG después de inyección, x02 (YAN) = {x02[1]:.4f}")
+    if not is_quiet():
+        print(f"   >> DEBUG después de inyección, x02 (YAN) = {x02[1]:.4f}")
     
     # Stage 2: after DAP
     sol2 = solve_ivp(
@@ -106,7 +126,8 @@ def resimulate_optimal(k_free, x0, time_dap, int_time, exp_temp,
         (t2[0], t2[-1]), x02,
         method='BDF', dense_output=True
     )
-    print(f"   sol2.y.shape = {sol2.y.shape}")
+    if not is_quiet():
+        print(f"   sol2.y.shape = {sol2.y.shape}")
     y2 = sol2.sol(t2).T
 
     # concatenate on original grid

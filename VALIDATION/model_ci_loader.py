@@ -5,6 +5,9 @@ Extracción de p_opt y CI basados en columnas 'th_i' de la hoja de calibración.
 """
 import pandas as pd
 import numpy as np
+import os
+import shutil
+import tempfile
 
 # columnas de parámetros en orden
 PARAM_COLS = [
@@ -44,7 +47,7 @@ def load_model_params(model_id: int, scale_id: int):
 
     # 3) leo hoja de calibración
     sheet = f"Z_{model_id}"
-    df2 = pd.read_excel(cal_path, sheet_name=sheet)
+    df2 = _read_excel_with_fallback(cal_path, sheet)
     df2.columns = df2.columns.str.strip()
 
     # iter column\ niter
@@ -93,3 +96,30 @@ def load_kfixed_vector():
         0.436908958787961
     ])
     return kfixed_0
+
+
+def _read_excel_with_fallback(path: str, sheet_name: str) -> pd.DataFrame:
+    """
+    Lee un Excel de manera robusta. Si el archivo está bloqueado por OneDrive/Excel
+    y lanza PermissionError/OSError, copia a una ruta temporal y lee desde allí.
+    """
+    try:
+        return pd.read_excel(path, sheet_name=sheet_name)
+    except (PermissionError, OSError) as e:
+        # Intenta copiar a un archivo temporal y leer desde ahí
+        try:
+            tmp_dir = tempfile.gettempdir()
+            base = os.path.basename(path)
+            tmp_path = os.path.join(tmp_dir, f"_tmp_copy_{base}")
+            shutil.copy2(path, tmp_path)
+            df = pd.read_excel(tmp_path, sheet_name=sheet_name)
+            # Limpieza best-effort (no crítica si falla en Windows)
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
+            return df
+        except Exception as e2:
+            raise PermissionError(
+                f"No se pudo leer '{path}' (bloqueado) ni copiar a temporal. Cierre el archivo en Excel/OneDrive y reintente. Detalle: {e} | fallback: {e2}"
+            )
