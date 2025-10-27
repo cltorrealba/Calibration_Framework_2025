@@ -23,6 +23,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import anderson
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
 
 # Local imports from this VALIDATION package
 from monte_carlo_module import run_monte_carlo, plot_simulation_ensemble
@@ -1157,6 +1162,168 @@ def run_transfer_go_nogo(out_base: str) -> None:
         pd.DataFrame(rows).to_csv(os.path.join(dirs['metrics'], 'transfer_go_nogo.csv'), index=False)
 
 
+def run_fixation_elasticnet_success(models: List[int], lab_expers: List[int],
+                                   kfixed_0: np.ndarray, seed: Optional[int],
+                                   out_base: str) -> None:
+    """
+    Train a sparse logistic (ElasticNet) classifier to predict success (RSQ >= global q75)
+    from fixation indicators. Outputs selected coefficients and AUROC.
+
+    Features:
+    - betaG0_fixed (1=fixed)
+    - Kg0_fixed
+    - Kie0_fixed
+    - Yields_fixed_frac = mean of fixed among [Yxn,Yxg,Yxf,Yeg,Yef]
+
+    Target:
+    - success = 1 if model's mean lab R2 (across variables and lab experiments) >= global q75; else 0
+    """
+    dirs = ensure_dirs(out_base)
+    metrics_path = os.path.join(dirs['metrics'], 'lab_metrics.csv')
+    if not os.path.exists(metrics_path):
+        return
+
+    lab_df = pd.read_csv(metrics_path)
+    # mean unadjusted R2 across variables and experiments by model (prefer rsq_cv_mean)
+    r2_col = 'rsq_cv_mean' if 'rsq_cv_mean' in lab_df.columns else ('r2_mean' if 'r2_mean' in lab_df.columns else None)
+    if r2_col is None:
+        return
+    agg = (lab_df.groupby('model_id')[r2_col]
+                  .mean().rename('r2_mean_model').reset_index())
+    if agg.empty:
+        return
+    q75 = float(agg['r2_mean_model'].quantile(0.75))
+    agg['success'] = (agg['r2_mean_model'] >= q75).astype(int)
+
+    # Build fixation features per model via a quick simulate to access ctx['flags']
+    rows = []
+    yields_cols = ['Yxn','Yxg','Yxf','Yeg','Yef']
+    # pick first available lab exper for flags context
+    exper_for_flags = lab_expers[0] if lab_expers else int(lab_df['exper_id'].iloc[0])
+    for mid in agg['model_id'].astype(int).tolist():
+        try:
+            # scale 1 = lab context
+            _, _, ctx = simulate_kfixed_model(mid, 1, exper_for_flags, kfixed_0)
+            flags = ctx.get('flags', None)
+            if flags is None or len(flags) < len(PARAM_COLS):
+                continue
+            # Map names to indices
+            name_to_idx = {name: i for i, name in enumerate(PARAM_COLS)}
+            def fixed(name: str) -> float:
+                idx = name_to_idx.get(name, None)
+                return float(flags[idx] == 1) if idx is not None else np.nan
+            yfrac = float(np.nanmean([fixed(c) for c in yields_cols]))
+            rows.append({
+                'model_id': mid,
+                'betaG0_fixed': fixed('betaG0'),
+                'Kg0_fixed': fixed('Kg0'),
+                'Kie0_fixed': fixed('Kie0'),
+                'Yields_fixed_frac': yfrac,
+            })
+        except Exception:
+            continue
+
+    feat_df = pd.DataFrame(rows)
+    # Fallback: if flags via simulate_kfixed_model not available, read HIPPO_result.xlsx from STEP 2
+    if feat_df.empty:
+        try:
+            hippo_path = (
+                r"C:/Users/ctorrealba/OneDrive - Viña Concha y Toro S.A/Documentos/Doctorado/"
+                r"Artículos/Artículo - Estimación/Codes/STEP 2/HIPPO_result.xlsx"
+            )
+            hippo = pd.read_excel(hippo_path, sheet_name='Sheet1')
+            # Keep viable models only if columns exist; else keep all
+            if {'CCc','I955'}.issubset(set(hippo.columns)):
+                hippo = hippo[(hippo['CCc']==0) & (hippo['I955']==0)]
+            name_to_idx = {name: i for i, name in enumerate(PARAM_COLS)}
+            recs = []
+            for mid in agg['model_id'].astype(int).tolist():
+                row = hippo.loc[hippo['FFF']==mid]
+                if row.empty:
+                    continue
+                r = row.iloc[0]
+                def fval(name: str) -> float:
+                    return float(r.get(name, np.nan))
+                yfrac = float(np.nanmean([fval(c) for c in yields_cols]))
+                recs.append({
+                    'model_id': mid,
+                    'betaG0_fixed': fval('betaG0'),
+                    'Kg0_fixed': fval('Kg0'),
+                    'Kie0_fixed': fval('Kie0'),
+                    'Yields_fixed_frac': yfrac,
+                })
+            feat_df = pd.DataFrame(recs)
+        except Exception:
+            feat_df = pd.DataFrame()
+    data = pd.merge(agg[['model_id','r2_mean_model','success']], feat_df, on='model_id', how='inner').dropna()
+    if data.empty:
+        return
+
+    X = data[['betaG0_fixed','Yields_fixed_frac','Kg0_fixed','Kie0_fixed']].to_numpy(dtype=float)
+    y = data['success'].astype(int).to_numpy()
+
+    # ElasticNet logistic with CV on C, optimized for ROC AUC
+    # Use standardization inside a Pipeline
+    cv = StratifiedKFold(n_splits=min(5, np.unique(y, return_counts=True)[1].min() if y.size>0 else 5), shuffle=True, random_state=seed if seed is not None else 42)
+    clf = Pipeline([
+        ('scaler', StandardScaler(with_mean=True, with_std=True)),
+        ('logit', LogisticRegressionCV(
+            Cs=[0.1, 0.5, 1.0, 2.0, 5.0],
+            cv=cv,
+            scoring='roc_auc',
+            penalty='elasticnet',
+            solver='saga',
+            l1_ratios=[0.5],
+            max_iter=5000,
+            n_jobs=None,
+            refit=True,
+            class_weight='balanced'
+        ))
+    ])
+
+    clf.fit(X, y)
+    # Cross-validated probabilities for AUROC estimation
+    try:
+        prob_cv = cross_val_predict(clf, X, y, cv=cv, method='predict_proba')[:, 1]
+        auroc = float(roc_auc_score(y, prob_cv))
+    except Exception:
+        try:
+            auroc = float(roc_auc_score(y, clf.predict_proba(X)[:,1]))
+        except Exception:
+            auroc = float('nan')
+
+    # Extract coefficients in feature order from the inner estimator after fit
+    try:
+        coef = clf.named_steps['logit'].coef_.ravel()
+        # Map back to our column order
+        coef_map = {
+            'betaG0_fixed': float(coef[0]),
+            'Yields_fixed_frac': float(coef[1]),
+            'Kg0_fixed': float(coef[2]),
+            'Kie0_fixed': float(coef[3]),
+        }
+    except Exception:
+        coef_map = {k: float('nan') for k in ['betaG0_fixed','Yields_fixed_frac','Kg0_fixed','Kie0_fixed']}
+
+    # Save outputs
+    out_coef = pd.DataFrame([
+        {'feature': 'betaG0', 'coef': coef_map['betaG0_fixed']},
+        {'feature': 'Yields', 'coef': coef_map['Yields_fixed_frac']},
+        {'feature': 'Kg0', 'coef': coef_map['Kg0_fixed']},
+        {'feature': 'Kie0', 'coef': coef_map['Kie0_fixed']},
+    ])
+    out_coef.to_csv(os.path.join(dirs['metrics'], 'elasticnet_fixation_success_coefs.csv'), index=False)
+    summary = {
+        'n_models': int(len(data)),
+        'q75_r2_threshold': float(q75),
+        'auroc': auroc,
+        'coef': {r['feature']: float(r['coef']) for _, r in out_coef.iterrows()}
+    }
+    with open(os.path.join(dirs['metrics'], 'elasticnet_fixation_success_summary.json'), 'w') as f:
+        import json as _json
+        _json.dump(summary, f, indent=2)
+
+
 def write_notes(out_base: str) -> None:
     notes = f"""
 This folder contains outputs from the new validation pipeline (validation_pipeline.py).
@@ -1216,6 +1383,11 @@ def run_full_pipeline(models: List[int], lab_expers: List[int], pilot_expers: Li
     run_transfer_stratified_temp(models, pilot_expers, kfixed_0, n_runs=n_runs, seed=seed, out_base=base)
     run_transfer_calibration(models, pilot_expers, kfixed_0, n_runs=n_runs, seed=seed, out_base=base)
     run_transfer_go_nogo(base)
+    # ElasticNet: fixation indicators -> success (q75 R2)
+    try:
+        run_fixation_elasticnet_success(models, lab_expers, kfixed_0, seed=seed, out_base=base)
+    except Exception:
+        pass
     # Notes
     write_notes(base)
 

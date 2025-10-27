@@ -1,1 +1,1 @@
-{"target_id":1750,"pc1":2.9841272998,"pc2":0.6863601252,"dist_to_top15_centroid_pc":0.8837056808,"delta_vs_top15_median":{"AICc":-10.8524887624,"MNCI":0.0277415784,"RSQ2":0.0197223358,"GSS":0.271048918},"explained_var_pct":[61.836368333,20.5212411428]}
+{"FFF":1750,"delta_AICc_vs_top15":-10.8524887624,"delta_MNCI_vs_top15":0.0277415784,"delta_RSQ_vs_top15":0.0197223358,"delta_GSS_vs_top15":0.271048918,"pc1":2.9841272998,"pc2":0.6863601252,"dist_to_top15_centroid_pc":0.8837056808,"explained_var_pct":[61.836368333,20.5212411428]}

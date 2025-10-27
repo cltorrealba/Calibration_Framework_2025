@@ -1,0 +1,23 @@
+import pandas as pd
+
+cons = pd.read_csv(r"STEP 4/salidas/Stage4_consensus_strength.csv")
+hippo = pd.read_excel(r"STEP 4\salidas\HIPPO_result.xlsx")
+
+PARAM_COLS = ['mu0','betaG0','betaF0','Kn0','Kg0','Kf0','Kig0','Kie0',
+              'Yxn','Yxg','Yxf','Yeg','Yef']
+
+# Top-15 por votos (desc) y desempate en fitness_mean (desc)
+# En Stage4_consensus_strength.csv el ID del modelo está en la columna 'model_id'
+top15 = (cons.sort_values(["votes","fitness_mean"], ascending=[False, False])
+              .head(15)["model_id"].astype(int).tolist())
+
+# Viables y en shortlist
+viable = hippo[(hippo["CCc"]==0) & (hippo["I955"]==0)]
+sub = viable[viable["FFF"].isin(top15)].set_index("FFF")
+
+# Conteo de “libre” (0) dentro del Top-15
+free_counts = (sub[PARAM_COLS] == 0).sum().astype(int)
+total = len(sub)
+
+for p in PARAM_COLS:
+    print(f"{p:7s} -> free {free_counts[p]}/{total}")

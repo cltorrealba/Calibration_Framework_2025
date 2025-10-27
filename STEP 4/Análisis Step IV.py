@@ -374,8 +374,8 @@ links_df = pd.DataFrame(link_rows)
 links_df['param_label'] = links_df['param'].map(PARAM_LABELS)
 links_df.to_csv(os.path.join(OUTPUT_DIR,'Stage4_param_criteria_links.csv'), index=False)
 
-# (x) Model-1750 snapshot (PC space and Δ-index vs Top-15 median)
-target_id = 1750 if 1750 in models.index else int(best_id)
+# (x) Model snapshots (PC space and Δ-index vs Top-15 median)
+# Compute PCA once for plotting-related context; also compute Top-15 median for Δ indices
 feat = models[['AICc','MNCI','RSQ2','GSS']].copy()
 # orient so that higher=better: negate minimization criteria
 feat_oriented = feat.copy(); feat_oriented[['AICc','MNCI']] = -feat_oriented[['AICc','MNCI']]
@@ -387,26 +387,48 @@ pca2 = PCA(2).fit(Z)
 scores = pca2.transform(Z)
 pc_df = pd.DataFrame(scores, index=models.index, columns=['PC1','PC2'])
 centroid_pc = pc_df.loc[top15_ids].median(axis=0)
-dist_pc = float(np.sqrt(((pc_df.loc[target_id] - centroid_pc)**2).sum())) if target_id in pc_df.index else np.nan
 median_top15 = models.loc[top15_ids, ['AICc','MNCI','RSQ2','GSS']].median()
-delta_index = {}
-if target_id in models.index:
-    row_target = models.loc[[target_id], ['AICc','MNCI','RSQ2','GSS']].iloc[0]
-    delta_index = (row_target - median_top15).to_dict()
-if target_id in pc_df.index:
-    pc1_val = float(pd.to_numeric(pd.Series(pc_df.loc[target_id, 'PC1'])).iloc[0])
-    pc2_val = float(pd.to_numeric(pd.Series(pc_df.loc[target_id, 'PC2'])).iloc[0])
-else:
-    pc1_val = np.nan; pc2_val = np.nan
-snap = {
-    'target_id': int(target_id),
-    'pc1': pc1_val,
-    'pc2': pc2_val,
-    'dist_to_top15_centroid_pc': dist_pc,
-    'delta_vs_top15_median': delta_index,
-    'explained_var_pct': [float(p*100) for p in pca2.explained_variance_ratio_]
-}
-pd.Series(snap, dtype=object).to_json(os.path.join(OUTPUT_DIR,'Stage4_model1750_snapshot.json'))
+
+def write_model_snapshot(model_id: int):
+    """Write per-model snapshot with Δ indices vs Top-15 median.
+    Outputs both JSON and CSV files named Stage4_model{model_id}_snapshot.* in OUTPUT_DIR.
+    """
+    if model_id not in models.index:
+        return False
+    # deltas vs Top-15 median
+    row = models.loc[[model_id], ['AICc','MNCI','RSQ2','GSS']].iloc[0]
+    dA = float(row['AICc'] - median_top15['AICc'])
+    dM = float(row['MNCI'] - median_top15['MNCI'])
+    dR = float(row['RSQ2'] - median_top15['RSQ2'])
+    dG = float(row['GSS'] - median_top15['GSS'])
+    # PC snapshot context
+    if model_id in pc_df.index:
+        pc1_val = float(pd.to_numeric(pd.Series(pc_df.loc[model_id, 'PC1'])).iloc[0])
+        pc2_val = float(pd.to_numeric(pd.Series(pc_df.loc[model_id, 'PC2'])).iloc[0])
+        dist_pc = float(np.sqrt(((pc_df.loc[model_id] - centroid_pc)**2).sum()))
+    else:
+        pc1_val = np.nan; pc2_val = np.nan; dist_pc = np.nan
+    snap = {
+        'FFF': int(model_id),
+        'delta_AICc_vs_top15': dA,
+        'delta_MNCI_vs_top15': dM,
+        'delta_RSQ_vs_top15': dR,
+        'delta_GSS_vs_top15': dG,
+        'pc1': pc1_val,
+        'pc2': pc2_val,
+        'dist_to_top15_centroid_pc': dist_pc,
+        'explained_var_pct': [float(p*100) for p in pca2.explained_variance_ratio_]
+    }
+    base = os.path.join(OUTPUT_DIR, f'Stage4_model{int(model_id)}_snapshot')
+    # JSON
+    pd.Series(snap, dtype=object).to_json(base + '.json')
+    # CSV (single-row)
+    pd.DataFrame([snap]).to_csv(base + '.csv', index=False)
+    return True
+
+# Write snapshots for requested models (1750 for completeness, plus 1860 and 2264)
+for mid in [1750, 1860, 2264]:
+    write_model_snapshot(mid)
 
 # (xi) Shortlist compression & complexity shift
 fix_mat = struct_df.set_index('model_id')[PARAM_COLS].reindex(models.index).fillna(0).astype(int)

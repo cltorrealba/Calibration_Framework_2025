@@ -152,6 +152,9 @@ fig2, axes = plt.subplots(n_rows, 3, figsize=(18, ROW_H * n_rows),
 if n_rows==1: axes=axes.reshape(1,3)
 freq_pool = (dfM[PARAM_COLS]==1).mean()*100
 
+# collect exact heatmap values (mean-based Δ%) across tiers for CSV export
+heatmap_rows = []
+
 for r,n_par in enumerate(tiers):
     sub = dfM[dfM["estim_params"]==n_par].copy()
     sel = sub["RSQ2"]>=q75
@@ -226,12 +229,38 @@ for r,n_par in enumerate(tiers):
         fr=sub.loc[sub[p]==0,ROBUST_COLS]
         delta[p]=(100*(f.mean()-fr.mean())/fr.mean()).fillna(np.nan)
     heat_df=pd.DataFrame(delta).T[ROBUST_COLS].round(1)
+
+    # export per-tier heatmap values and accumulate for consolidated CSV
+    try:
+        tier_csv = os.path.join(OUT_DIR, f'complexity_grid_heatmap_tier{n_par}.csv')
+        heat_df.to_csv(tier_csv, index_label='param')
+    except Exception:
+        pass
+    for idx in ROBUST_COLS:
+        for p in heat_df.index:
+            try:
+                val = float(heat_df.loc[p, idx])
+            except Exception:
+                val = float('nan')
+            heatmap_rows.append({
+                'estim_params': int(n_par),
+                'param': p,
+                'index': idx,
+                'delta_mean_pct': val
+            })
     sns.heatmap(heat_df, cmap="vlag", center=0, robust=True,
                 xticklabels=ROBUST_COLS,
                 yticklabels=[param_labels[p] for p in PARAM_COLS],
                 annot=True, fmt=".1f", annot_kws={"size":7},
                 linewidths=0.5, linecolor="gray", ax=axH)
     axH.set_title(f"(C) Δ-Index (%) – {n_par} free")
+
+# write consolidated CSV for all tiers with exact heatmap values
+try:
+    if heatmap_rows:
+        pd.DataFrame(heatmap_rows).to_csv(os.path.join(OUT_DIR, 'complexity_grid_heatmap_values.csv'), index=False)
+except Exception:
+    pass
 
 fig2.tight_layout()
 # Save PNG and LaTeX-ready PDF into salidas/figs with fallback if locked
