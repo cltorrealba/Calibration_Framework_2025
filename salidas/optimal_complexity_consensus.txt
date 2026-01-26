@@ -1,0 +1,14 @@
+Consensus optimal complexity: 6 free parameters
+Selected by 4/10 metrics
+
+Metric details:
+  metric_PWR: 4 (value=4.959)
+  metric_QS: 9 (value=100.471)
+  metric_WCS: 3 (value=0.580)
+  metric_PES: 6 (value=1.597)
+  metric_RI: 3 (value=1.198)
+  metric_IEI: 6 (value=5.155)
+  metric_BPI: 4 (value=1.494)
+  metric_SPI: 6 (value=32.242)
+  metric_PSC: 6 (value=3.749)
+  metric_TAS: 7 (value=1.901)

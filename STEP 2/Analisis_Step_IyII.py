@@ -60,24 +60,224 @@ TOTAL_PARAMS = len(PARAM_COLS)
 INDICES_PCA  = ['Akaike','MeanCC','Fobj']       # BIC excluded for PCA
 INDICES_HEAT = ['Akaike','MeanCC','Fobj']       # for heat-maps
 
+def plot_parameter_fixation_tree(df_all, param_cols, param_labels,
+                                 save_dir=os.path.join("salidas","figs"),
+                                 filename="parameter_fixation_tree_stageII"):
+    """
+    Single tree-type figure summarizing how parameters are fixed across HIPPO depth,
+    considering only viable models (Stage II).
+
+    - X-axis: number of fixed parameters in the structure (n_fixed).
+    - Y-axis: model parameters.
+    - For each parameter, a branch is drawn through the depth levels.
+      The size of each node (bubble) at a given level corresponds to the fraction
+      of Stage II structures at that level where that parameter is fixed (1).
+
+    A simpler version than the 3-panel figure: a single image, without PCA or heatmaps,
+    showing persistence and fixation patterns of parameters in models classified as viable.
+    """
+    import os
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Basic checks
+    if "stage" not in df_all.columns or "estim_params" not in df_all.columns:
+        raise ValueError("df_all must contain columns 'stage' and 'estim_params'.")
+
+    # Work ONLY with viable models (Stage II)
+    stage2 = df_all[df_all["stage"] == "II"].copy()
+    if stage2.empty:
+        raise ValueError("No viable models (Stage II) found in df_all.")
+
+    # Use estim_params directly as n_free (number of free/estimated parameters)
+    # This aligns with STEP 3 definition: n_free = sum(PARAM_COLS==0)
+    stage2["n_free"] = stage2["estim_params"]
+    df_all["n_free"] = df_all["estim_params"]
+
+    # Depth: use n_free range from 3 to 9
+    depth_levels = sorted(set(int(x) for x in df_all["n_free"].unique() if 3 <= x <= 9))
+    if not depth_levels:
+        raise ValueError("No depth levels found in n_free range [3, 9].")
+
+    # ------------------------------------------------------------------ #
+    # 1) For each depth (n_free) and parameter, fraction of Stage II where #
+    #    the parameter is fixed (1 = fixed, 0 = free).                     #
+    # ------------------------------------------------------------------ #
+    records = []
+    for d in depth_levels:
+        subset = stage2[stage2["n_free"] == d]
+        N = len(subset)
+        for p in param_cols:
+            if p not in df_all.columns:
+                continue
+            # If no Stage II at that level, fraction=0 so level appears
+            frac_fixed = float((subset[p] == 1).mean()) if N > 0 else 0.0
+            count_fixed = int((subset[p] == 1).sum()) if N > 0 else 0
+            records.append({
+                "depth": d,
+                "param": p,
+                "frac_fixed": frac_fixed,
+                "count_fixed": count_fixed,
+                "N_depth": N,
+            })
+
+    tree_df = pd.DataFrame(records)
+    if tree_df.empty:
+        raise ValueError("tree_df is empty – check that param_cols exist in df_all.")
+
+    # Parameter order: from most fixed (on average) to least fixed
+    avg_fix = tree_df.groupby("param")["frac_fixed"].mean().sort_values(ascending=False)
+    param_order = list(avg_fix.index)
+
+    # Mapping parameter -> vertical position and color
+    y_positions = {p: i for i, p in enumerate(param_order)}
+    n_params = len(param_order)
+    # Numeric scale (fixed fraction) from cool to hot
+    cmap = plt.get_cmap("coolwarm")
+    norm = mpl.colors.Normalize(vmin=0, vmax=1)
+
+    # ------------------------------------------------------------------ #
+    # 2) Plot: x = depth (n_fixed), y = parameter index,                 #
+    #    bubble size = fixed fraction (Stage II)                         #
+    # ------------------------------------------------------------------ #
+    fig, ax = plt.subplots(figsize=(9, 5 + 0.2*n_params))
+
+    # First: draw background histogram showing Stage II model counts per depth
+    # This forms a Gaussian-like envelope across the plot
+    depth_counts = stage2.groupby("n_free").size()
+    max_depth_count = depth_counts.max()
+    y_bottom = -0.8
+    y_top = len(param_order) - 0.2
+    plot_height = y_top - y_bottom
+    
+    for d in depth_levels:
+        count = depth_counts.get(d, 0)
+        if count > 0:
+            # Normalize height to 80% of plot height for breathing room
+            bar_height = 0.8 * plot_height * (count / max_depth_count)
+            ax.bar(d, bar_height, width=0.9, bottom=y_bottom, 
+                   color='#505050', alpha=0.25, edgecolor='none', zorder=0)
+            
+            # Add label at top-right corner of each bar
+            label_x = d + 0.35
+            label_y = y_bottom + bar_height - 0.3
+            ax.text(label_x, label_y, f"n={int(count)}", 
+                   fontsize=8, ha='right', va='top', color='#404040', 
+                   fontweight='bold', alpha=0.8, zorder=1)
+
+    # Second pass: draw branches and nodes on top
+    for p in param_order:
+        dfp = tree_df[tree_df["param"] == p].sort_values("depth")
+        if dfp.empty:
+            continue
+        xs = dfp["depth"].to_numpy(dtype=float)
+        ys = np.full_like(xs, fill_value=y_positions[p], dtype=float)
+        frac = dfp["frac_fixed"].to_numpy(dtype=float)
+        counts = dfp["count_fixed"].to_numpy(dtype=float)
+
+        # Branch (line) using average branch color (fixed fraction)
+        branch_color = cmap(norm(frac.mean())) if len(frac) > 0 else "gray"
+        ax.plot(xs, ys, color=branch_color, alpha=0.6, linewidth=1.0, zorder=3)
+
+        # Nodes (bubbles): color = fixed fraction; size = count of Stage II models with parameter fixed
+        sizes = np.where(counts > 0, 20.0 + 15.0*np.sqrt(counts), 0.0)
+        colors = cmap(norm(frac))
+        ax.scatter(xs, ys,
+                   s=sizes,
+                   color=colors,
+                   alpha=0.9,
+                   edgecolors="k",
+                   linewidths=0.3,
+                   zorder=4)
+
+    # Y-axis: parameter names (with LaTeX)
+    ax.set_yticks(list(y_positions.values()))
+    ax.set_yticklabels([param_labels.get(p, p) for p in param_order])
+    ax.set_ylim(-0.8, len(param_order) - 0.2)
+
+    # X-axis: depth (n_free = number of free parameters)
+    ax.set_xlabel("Number of free parameters in structure ($n_{\\mathrm{free}}$)")
+    ax.set_ylabel("Model parameter")
+    ax.set_xticks(depth_levels)
+    ax.set_xticklabels(depth_levels)
+    ax.set_xlim(min(depth_levels) - 0.5, max(depth_levels) + 0.5)
+
+    # Title aligned with article discourse
+    ax.set_title("Parameter fixation tree along Stage II")
+
+    # Soft grid on X-axis to aid reading levels
+    ax.grid(axis="x", linestyle="--", alpha=0.3)
+
+    # Color bar with numeric meaning
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+    cbar = fig.colorbar(sm, ax=ax, pad=0.015, fraction=0.04, shrink=0.65)
+    cbar.set_label("Fraction of viable models with parameter fixed")
+
+    fig.tight_layout()
+
+    png_path = os.path.join(save_dir, f"{filename}.png")
+    pdf_path = os.path.join(save_dir, f"{filename}.pdf")
+    fig.savefig(png_path, dpi=350, bbox_inches="tight")
+    try:
+        fig.savefig(pdf_path, format="pdf", bbox_inches="tight")
+    except Exception:
+        pass
+
+    plt.close(fig)
+
+
 # viability mask
 mask_viable = (df['CCc']==0) & (df['I955']==0)
 df_all = df.copy()
 df_all['stage']   = np.where(mask_viable, 'II', 'I')
 df_all['n_fixed'] = TOTAL_PARAMS - df_all['estim_params']
-stage2 = df_all[df_all['stage']=='II']
+df_all['n_free']  = df_all['estim_params']
+
+# Split Stage I / Stage II and attach n_free
+stage1 = df_all[df_all['stage']=='I'].copy()
+stage2 = df_all[df_all['stage']=='II'].copy()
+stage1['n_free'] = stage1['estim_params']
+stage2['n_free'] = stage2['estim_params']
+
+# Selective filtering for Stage II: only n_free=7,8 aligned to STEP 3 subset
+zenteno_robust_path = '../STEP 3/Zenteno_Final_2023b_WS.xlsx'
+stage2_filtered = stage2.copy()
+try:
+    df_robust = pd.read_excel(zenteno_robust_path, sheet_name='Sheet1')
+    valid_fff_codes = set(df_robust['FFF'].unique())
+
+    stage2_n78   = stage2[stage2['n_free'].isin([7, 8])].copy()
+    stage2_other = stage2[~stage2['n_free'].isin([7, 8])].copy()
+    stage2_n78_filtered = stage2_n78[stage2_n78['FFF'].isin(valid_fff_codes)].copy()
+
+    stage2_filtered = pd.concat([stage2_n78_filtered, stage2_other], ignore_index=True)
+    print(f"Fixation tree/histogram: n_free=7,8 filtered to {len(stage2_n78_filtered)} models (STEP 3 subset)")
+    print(f"  n_free=7,8 distribution: {dict(stage2_n78_filtered['n_free'].value_counts().sort_index())}")
+    print(f"Other tiers: {len(stage2_other)} models (all Stage II)")
+    print(f"Total for filtered Stage II: {len(stage2_filtered)} models")
+except Exception as e:
+    print(f"Warning: Could not load Zenteno_Final file - using full Stage II dataset ({e})")
+
+# Reuse filtered Stage II later (tree, histogram)
+stage2_for_tree = stage2_filtered.copy()
 
 # ========================================================================== #
 # 2. FIGURE 1 – Panel A (histogram with counts)                              #
 # ========================================================================== #
 fig1, axA = plt.subplots(figsize=(7,4))
-bins = np.arange(df_all['n_fixed'].min() - 0.5,
-                 df_all['n_fixed'].max() + 1.5, 1)
+combined_nfree = pd.concat([stage1['n_free'], stage2_filtered['n_free']], ignore_index=True)
+min_nfree = int(combined_nfree.min())
+max_nfree = int(combined_nfree.max())
+bins = np.arange(min_nfree - 0.5, max_nfree + 1.5, 1)
 width = bins[1] - bins[0]
 
-# full pool
+# Stage I models (gray)
 counts_all, edges_all, _ = axA.hist(
-    df_all['n_fixed'], bins=bins,
+    stage1['n_free'], bins=bins,
     color=PAL_GRAY, alpha=0.4, width=0.45, label='Stage I models'
 )
 for count, left in zip(counts_all, edges_all[:-1]):
@@ -87,25 +287,27 @@ for count, left in zip(counts_all, edges_all[:-1]):
         axA.text(center, c + 0.3, f'{int(c)}',
                  ha='center', va='bottom', fontsize=8, color='black')
 
-# filtered pool
+# Stage II models (filtered for n_free=7,8)
 bins2 = bins + 0.2
 counts2, edges2, _ = axA.hist(
-    stage2['n_fixed'], bins=bins2,
+    stage2_filtered['n_free'], bins=bins2,
     color=PAL_BLUE, alpha=0.85, width=0.45, label='Stage II models'
 )
 for count, left in zip(counts2, edges2[:-1]):
     c = float(count)
-    if c > 0:
-        center = left + width/2
-        axA.text(center, c + 0.6, f'{int(c)}',
-                 ha='center', va='bottom', fontsize=8, color=PAL_BLUE)
+    center = left + width/2
+    label_y = c + 0.6 if c > 0 else 0.15
+    axA.text(center, label_y, f'{int(c)}',
+             ha='center', va='bottom', fontsize=8, color=PAL_BLUE)
 
-axA.set_xlabel('Number of Fixed Parameters')
-axA.set_ylabel('Count')
-axA.set_title('Fixed-parameter distribution')
+axA.set_xlabel('Number of Free Parameters ($n_{\mathrm{free}}$)')
+axA.set_ylabel('N° of model structures')
+axA.set_xticks(np.arange(min_nfree, max_nfree + 1, 1))
 axA.legend()
 fig1.tight_layout()
 fig1.savefig('figure1_histogram_fixed.png', dpi=350)
+os.makedirs('salidas/figs', exist_ok=True)
+fig1.savefig(os.path.join('salidas','figs','figure1_histogram_fixed.pdf'), dpi=350, bbox_inches='tight')
 
 
 # ========================================================================== #
@@ -250,7 +452,7 @@ print("\n=== Stage I/II quantitative summary ===")
 print(f"Total models (Stage I population): {total_models}")
 print(f"Retained after filtering (Stage II): {retained_models} ({stats['retention_rate_pct']}% retained; {stats['elimination_rate_pct']}% eliminated)")
 print(f"n_fixed mean (all vs retained): {stats['n_fixed_all_mean']} -> {stats['n_fixed_sel_mean']} (Cohen's d = {stats['effect_size_nfixed_cohens_d']})")
-print(f"estim_params mean (all vs retained): {stats['estim_params_all_mean']} -> {stats['estim_params_sel_mean']} (Δ = {stats['avg_complexity_reduction_mean_pars']})")
+print(f"estim_params mean (all vs retained): {stats['estim_params_all_mean']} -> {stats['estim_params_sel_mean']} (Delta = {stats['avg_complexity_reduction_mean_pars']})")
 print(f"Complexity threshold (Np-2): {stats['complexity_threshold_Np_minus_2']} (Np_max in Stage II = {stats['Np_max_stageII']})")
 
 
@@ -460,36 +662,97 @@ def bh_fdr(pvals):
 delta_rows = []
 pvals = []
 keys = []
-boot_ci_low = {}
-boot_ci_high = {}
+
+def bootstrap_delta_abs_and_pct(fixed_vals, free_vals, rng, B=1000):
+    """Bootstrap 95% CI for absolute and percent deltas.
+
+    Returns:
+        (ci_abs_lo, ci_abs_hi, ci_pct_lo, ci_pct_hi)
+    """
+    fixed_vals = np.asarray(fixed_vals, dtype=float)
+    free_vals = np.asarray(free_vals, dtype=float)
+    fixed_vals = fixed_vals[np.isfinite(fixed_vals)]
+    free_vals = free_vals[np.isfinite(free_vals)]
+    nfx, nfr = len(fixed_vals), len(free_vals)
+    if nfx < 2 or nfr < 2:
+        return (np.nan, np.nan, np.nan, np.nan)
+
+    abs_diffs = []
+    pct_diffs = []
+    for _ in range(int(B)):
+        sfx = fixed_vals[rng.integers(0, nfx, nfx)]
+        sfr = free_vals[rng.integers(0, nfr, nfr)]
+        mfx = float(np.mean(sfx))
+        mfr = float(np.mean(sfr))
+        d_abs = mfx - mfr
+        abs_diffs.append(d_abs)
+        if mfr != 0:
+            pct_diffs.append(100.0 * d_abs / mfr)
+        else:
+            pct_diffs.append(np.nan)
+
+    ci_abs_lo = float(np.nanpercentile(abs_diffs, 2.5))
+    ci_abs_hi = float(np.nanpercentile(abs_diffs, 97.5))
+    ci_pct_lo = float(np.nanpercentile(pct_diffs, 2.5))
+    ci_pct_hi = float(np.nanpercentile(pct_diffs, 97.5))
+    return (ci_abs_lo, ci_abs_hi, ci_pct_lo, ci_pct_hi)
 
 for p in PARAM_COLS:
     fixed = stage2[stage2[p]==1][INDICES_HEAT].astype(float)
     free  = stage2[stage2[p]==0][INDICES_HEAT].astype(float)
     for idx in INDICES_HEAT:
-        if free.empty or fixed.empty:
-            d = np.nan; pval = np.nan; ci_low = np.nan; ci_high = np.nan
+        fx = fixed[idx].dropna().values if (idx in fixed.columns) else np.array([], dtype=float)
+        fr = free[idx].dropna().values if (idx in free.columns) else np.array([], dtype=float)
+        n_models_fixed = int(np.isfinite(fx).sum())
+        n_models_free = int(np.isfinite(fr).sum())
+
+        if n_models_fixed == 0 or n_models_free == 0:
+            mu_fixed = np.nan
+            mu_free = np.nan
+            d_abs = np.nan
+            d_pct = np.nan
+            pval = np.nan
+            ci_abs_lo = np.nan
+            ci_abs_hi = np.nan
+            ci_pct_lo = np.nan
+            ci_pct_hi = np.nan
         else:
-            d = 100*(fixed[idx].mean() - free[idx].mean())/ (free[idx].mean() if free[idx].mean()!=0 else np.nan)
+            mu_fixed = float(np.nanmean(fx))
+            mu_free = float(np.nanmean(fr))
+            d_abs = mu_fixed - mu_free
+            d_pct = 100.0 * d_abs / (mu_free if mu_free != 0 else np.nan)
+
             # Welch t-test
-            _, pval = ttest_ind(fixed[idx].values, free[idx].values, equal_var=False, nan_policy='omit')
-            # bootstrap CI
-            B = 1000
-            diffs = []
-            fx = fixed[idx].dropna().values; fr = free[idx].dropna().values
-            nfx, nfr = len(fx), len(fr)
-            if nfx>1 and nfr>1:
-                for _ in range(B):
-                    sfx = fx[rng.integers(0, nfx, nfx)]
-                    sfr = fr[rng.integers(0, nfr, nfr)]
-                    mfx = sfx.mean(); mfr = sfr.mean()
-                    diffs.append(100*(mfx - mfr)/(mfr if mfr!=0 else np.nan))
-                ci_low = float(np.nanpercentile(diffs, 2.5))
-                ci_high = float(np.nanpercentile(diffs, 97.5))
+            if n_models_fixed >= 2 and n_models_free >= 2:
+                _, pval = ttest_ind(fx, fr, equal_var=False, nan_policy='omit')
             else:
-                ci_low = np.nan; ci_high = np.nan
-        delta_rows.append({'param': p, 'index': idx, 'delta_pct': float(d) if np.isfinite(d) else np.nan,
-                           'ci_low': ci_low, 'ci_high': ci_high, 'p_value': float(pval) if np.isfinite(pval) else np.nan})
+                pval = np.nan
+
+            # bootstrap CI (absolute and percent deltas)
+            ci_abs_lo, ci_abs_hi, ci_pct_lo, ci_pct_hi = bootstrap_delta_abs_and_pct(
+                fixed_vals=fx,
+                free_vals=fr,
+                rng=rng,
+                B=1000,
+            )
+
+        # Keep legacy columns (delta_pct, ci_low, ci_high) for backward compatibility
+        # ci_low/ci_high refer to percent-delta CI.
+        delta_rows.append({
+            'param': p,
+            'index': idx,
+            'n_fixed_models': n_models_fixed,
+            'n_free_models': n_models_free,
+            'mu_fixed': mu_fixed,
+            'mu_free': mu_free,
+            'delta_abs': float(d_abs) if np.isfinite(d_abs) else np.nan,
+            'delta_pct': float(d_pct) if np.isfinite(d_pct) else np.nan,
+            'ci_low': ci_pct_lo,
+            'ci_high': ci_pct_hi,
+            'ci_low_abs': ci_abs_lo,
+            'ci_high_abs': ci_abs_hi,
+            'p_value': float(pval) if np.isfinite(pval) else np.nan,
+        })
         pvals.append(np.nan if not np.isfinite(pval) else float(pval))
         keys.append((p, idx))
 
@@ -673,6 +936,44 @@ def knee_point(xs, ys):
     idx = int(np.argmax(dists))
     return idx
 
+# Metric for knee quality: deflection angle (degrees)
+# Measures the change in slope direction at the knee point
+def knee_deflection_angle(xs, ys, knee_idx):
+    """
+    Computes the knee quality as the change in slope magnitude (steepness).
+    
+    Returns the ratio: |slope_before| / |slope_after|
+    - Ratio > 2.0 means the slope before is >2x steeper than after → SHARP knee
+    - Ratio 1.2-2.0 means moderate change in steepness → MODERATE knee
+    - Ratio < 1.2 means similar slopes → WEAK knee
+    
+    Also returns the "deflection angle" as arctan(|slope_before|) - arctan(|slope_after|) 
+    in degrees, representing the change in the angle of decline.
+    """
+    xs = np.asarray(xs, dtype=float)
+    ys = np.asarray(ys, dtype=float)
+    if knee_idx is None or knee_idx < 1 or knee_idx >= len(xs)-1:
+        return np.nan
+    
+    # Compute slopes (rise/run) before and after knee
+    slope_before = (ys[knee_idx] - ys[knee_idx-1]) / (xs[knee_idx] - xs[knee_idx-1])
+    slope_after = (ys[knee_idx+1] - ys[knee_idx]) / (xs[knee_idx+1] - xs[knee_idx])
+    
+    # For visualization: angle of decline in degrees
+    # Using absolute values to measure steepness
+    abs_slope_before = abs(slope_before)
+    abs_slope_after = abs(slope_after)
+    
+    if abs_slope_before < 1e-9 or abs_slope_after < 1e-9:
+        return np.nan
+    
+    # Deflection angle: difference in the angles of decline
+    angle_before = np.degrees(np.arctan(abs_slope_before))
+    angle_after = np.degrees(np.arctan(abs_slope_after))
+    deflection_angle = angle_before - angle_after
+    
+    return float(deflection_angle)
+
 ret_by_nfree = ret_by_nfree.sort_values('n_free').reset_index(drop=True)
 knee_idx = knee_point(ret_by_nfree['n_free'], ret_by_nfree['retention'])
 ret_by_nfree['is_knee'] = False
@@ -763,6 +1064,12 @@ try:
         ret_plot.at[ret_plot.index[knee_pos], 'is_knee_plot'] = True
         knee_row = ret_plot.iloc[knee_pos]
         knee_n_free = int(knee_row['n_free']) if not pd.isna(knee_row['n_free']) else np.nan
+        
+        # KNEE QUALITY METRIC: deflection angle (degrees)
+        x_vals = ret_plot['n_free'].values.astype(float)
+        y_vals = ret_plot['retention'].values.astype(float)
+        deflection_angle = knee_deflection_angle(x_vals, y_vals, knee_idx_plot)
+        
         # Local slopes for retention around knee (finite differences)
         idx = knee_pos
         slope_left = np.nan
@@ -788,10 +1095,11 @@ try:
                 'knee_Fobj_ci_lo': float(knee_row['Fobj_ci_lo']) if not pd.isna(knee_row['Fobj_ci_lo']) else np.nan,
                 'knee_Fobj_ci_hi': float(knee_row['Fobj_ci_hi']) if not pd.isna(knee_row['Fobj_ci_hi']) else np.nan,
                 'knee_Fobj_n': int(knee_row['Fobj_n']) if not pd.isna(knee_row['Fobj_n']) else np.nan,
+                'knee_deflection_angle_deg': round(deflection_angle, 2) if np.isfinite(deflection_angle) else np.nan,
+                'retention_slope_left': float(slope_left) if slope_left == slope_left else np.nan,
+                'retention_slope_right': float(slope_right) if slope_right == slope_right else np.nan,
                 'spearman_rho_nfree_retention': float(rho_ret) if not pd.isna(rho_ret) else np.nan,
                 'spearman_rho_nfree_fobjmean': float(rho_fobj) if not pd.isna(rho_fobj) else np.nan,
-                'retention_slope_left': float(slope_left) if slope_left == slope_left else np.nan,
-                'retention_slope_right': float(slope_right) if slope_right == slope_right else np.nan
             }
         ])
     else:
@@ -809,15 +1117,31 @@ try:
                 'knee_Fobj_ci_lo': np.nan,
                 'knee_Fobj_ci_hi': np.nan,
                 'knee_Fobj_n': np.nan,
+                'knee_deflection_angle_deg': np.nan,
+                'retention_slope_left': np.nan,
+                'retention_slope_right': np.nan,
                 'spearman_rho_nfree_retention': np.nan,
                 'spearman_rho_nfree_fobjmean': np.nan,
-                'retention_slope_left': np.nan,
-                'retention_slope_right': np.nan
             }
         ])
     # Save summary and plot-range table
     summary.to_csv(os.path.join('salidas','stage2_knee_summary.csv'), index=False)
     ret_plot.to_csv(os.path.join('salidas','retention_by_nfree_counts_plotrange.csv'), index=False)
+    
+    # Print knee quality metric to console
+    print("\n=== KNEE QUALITY METRIC ===")
+    if knee_idx_plot is not None and len(ret_plot) > 0:
+        deflection = summary.iloc[0]['knee_deflection_angle_deg']
+        n_free = summary.iloc[0]['knee_n_free']
+        retention = summary.iloc[0]['knee_retention']
+        if not pd.isna(deflection):
+            quality = "SHARP" if deflection > 30 else "MODERATE" if deflection > 15 else "WEAK"
+            print(f"Knee at n_free = {int(n_free)} (retention = {retention:.1%})")
+            print(f"Slope deflection = {deflection:.2f}° [{quality} change in steepness]")
+        else:
+            print("Could not compute deflection angle")
+    else:
+        print("No knee point found")
 except Exception as e:
     print(f"[WARN] Could not export knee summary: {e}")
 
@@ -926,3 +1250,221 @@ try:
 except PermissionError:
     # write with a versioned name if previous is open
     fig2.savefig(os.path.join('salidas','figs','stage2_Fig_complexity_grid_v2.pdf'), format='pdf', bbox_inches='tight')
+
+
+# ========================================================================== #
+# FIGURA – Árbol de fijación de parámetros (versión simple para el artículo) #
+# ========================================================================== #
+
+# Reuse the filtered Stage II set (n_free=7,8 aligned to STEP 3)
+df_all_filtered = stage2_for_tree.copy()
+
+plot_parameter_fixation_tree(
+    df_all=df_all_filtered,
+    param_cols=PARAM_COLS,
+    param_labels=param_labels,
+)
+
+
+# ========================================================================== #
+# TABLE S1: STAGE I ROBUSTNESS DIAGNOSTICS                                   #
+# ========================================================================== #
+print("\n=== Generating Table S1: Stage I Robustness Diagnostics ===")
+
+def compute_robust_stats(x):
+    """Compute robust statistics for a given metric array."""
+    return {
+        'mean': float(np.mean(x)),
+        'std': float(np.std(x, ddof=1)),
+        'median': float(np.median(x)),
+        'q1': float(np.percentile(x, 25)),
+        'q3': float(np.percentile(x, 75)),
+        'iqr': float(np.percentile(x, 75) - np.percentile(x, 25)),
+        'min': float(np.min(x)),
+        'max': float(np.max(x)),
+        'p5': float(np.percentile(x, 5)),
+        'p95': float(np.percentile(x, 95)),
+    }
+
+def count_tukey_outliers(x):
+    """Count outliers using Tukey's fences (1.5 * IQR rule)."""
+    q1 = np.percentile(x, 25)
+    q3 = np.percentile(x, 75)
+    iqr = q3 - q1
+    lower_fence = q1 - 1.5 * iqr
+    upper_fence = q3 + 1.5 * iqr
+    n_outliers = int(np.sum((x < lower_fence) | (x > upper_fence)))
+    return n_outliers, lower_fence, upper_fence
+
+# Table S1A: Overall Stage I population statistics (all models)
+print("  Computing overall Stage I statistics...")
+table_s1a_rows = []
+for metric_name in ['Akaike', 'MeanCC', 'Fobj']:
+    x = df_all[metric_name].astype(float).values
+    stats = compute_robust_stats(x)
+    n_outliers, lower_fence, upper_fence = count_tukey_outliers(x)
+    
+    table_s1a_rows.append({
+        'Metric': metric_name,
+        'N': len(x),
+        'Mean': stats['mean'],
+        'SD': stats['std'],
+        'Median': stats['median'],
+        'Q1': stats['q1'],
+        'Q3': stats['q3'],
+        'IQR': stats['iqr'],
+        'Min': stats['min'],
+        'Max': stats['max'],
+        'P5': stats['p5'],
+        'P95': stats['p95'],
+        'N_Outliers': n_outliers,
+        'Lower_Fence': lower_fence,
+        'Upper_Fence': upper_fence,
+    })
+
+table_s1a = pd.DataFrame(table_s1a_rows)
+
+# Table S1B: Statistics by n_fixed category
+print("  Computing statistics by n_fixed category...")
+table_s1b_rows = []
+for n_fix in sorted(df_all['n_fixed'].unique()):
+    df_subset = df_all[df_all['n_fixed'] == n_fix]
+    n_models = len(df_subset)
+    
+    for metric_name in ['Akaike', 'MeanCC', 'Fobj']:
+        x = df_subset[metric_name].astype(float).values
+        stats = compute_robust_stats(x)
+        n_outliers, lower_fence, upper_fence = count_tukey_outliers(x)
+        
+        table_s1b_rows.append({
+            'n_fixed': int(n_fix),
+            'Metric': metric_name,
+            'N_models': n_models,
+            'Mean': stats['mean'],
+            'SD': stats['std'],
+            'Median': stats['median'],
+            'Q1': stats['q1'],
+            'Q3': stats['q3'],
+            'IQR': stats['iqr'],
+            'P5': stats['p5'],
+            'P95': stats['p95'],
+            'N_Outliers': n_outliers,
+        })
+
+table_s1b = pd.DataFrame(table_s1b_rows)
+
+# Table S1C: Spearman correlation analysis (sensitivity to n_fixed)
+print("  Computing Spearman correlations with n_fixed...")
+table_s1c_rows = []
+for metric_name in ['Akaike', 'MeanCC', 'Fobj']:
+    rho, pval = spearmanr(df_all['n_fixed'], df_all[metric_name])
+    
+    table_s1c_rows.append({
+        'Metric': metric_name,
+        'Spearman_rho': float(rho),
+        'p_value': float(pval),
+        'Significance': 'p < 0.001' if pval < 0.001 else f'p = {pval:.4f}',
+    })
+
+table_s1c = pd.DataFrame(table_s1c_rows)
+
+# Save all tables
+table_s1a.round(4).to_csv(os.path.join('salidas', 'tableS1A_overall_stats.csv'), index=False)
+table_s1b.round(4).to_csv(os.path.join('salidas', 'tableS1B_stats_by_nfixed.csv'), index=False)
+table_s1c.round(4).to_csv(os.path.join('salidas', 'tableS1C_spearman_sensitivity.csv'), index=False)
+
+print("\n  Table S1 components saved:")
+print(f"    - tableS1A_overall_stats.csv (overall population)")
+print(f"    - tableS1B_stats_by_nfixed.csv (by complexity category)")
+print(f"    - tableS1C_spearman_sensitivity.csv (sensitivity analysis)")
+
+# Optional: Generate LaTeX-ready combined table
+print("\n  Generating LaTeX-formatted Table S1...")
+
+# Create a comprehensive LaTeX table string
+latex_lines = []
+latex_lines.append(r"\begin{table}[h!]")
+latex_lines.append(r"\centering")
+latex_lines.append(r"\caption{Stage I Robustness Diagnostics: Overall statistics, category-wise breakdown, and sensitivity analysis for key model selection indices.}")
+latex_lines.append(r"\label{tab:S1}")
+latex_lines.append(r"\small")
+latex_lines.append(r"\begin{tabular}{llrrrrrrr}")
+latex_lines.append(r"\hline")
+latex_lines.append(r"\textbf{Part A: Overall Statistics} & & & & & & & & \\")
+latex_lines.append(r"\hline")
+latex_lines.append(r"Metric & N & Mean & SD & Median & IQR & P5--P95 & N$_{\mathrm{outliers}}$ \\")
+latex_lines.append(r"\hline")
+
+for _, row in table_s1a.iterrows():
+    metric = row['Metric']
+    if metric == 'Akaike':
+        metric_label = 'AICc'
+    elif metric == 'MeanCC':
+        metric_label = r'$\overline{CC_p}$'
+    else:
+        metric_label = r'$F_{\mathrm{obj}}$'
+    
+    latex_lines.append(
+        f"{metric_label} & {row['N']:.0f} & {row['Mean']:.2f} & {row['SD']:.2f} & "
+        f"{row['Median']:.2f} & {row['IQR']:.2f} & {row['P5']:.2f}--{row['P95']:.2f} & "
+        f"{row['N_Outliers']:.0f} \\\\"
+    )
+
+latex_lines.append(r"\hline")
+latex_lines.append(r"\textbf{Part B: By Complexity Category} (selected $n_{\mathrm{fixed}}$ values) & & & & & & & & \\")
+latex_lines.append(r"\hline")
+latex_lines.append(r"$n_{\mathrm{fixed}}$ & Metric & N & Mean & Median & IQR & P5--P95 & N$_{\mathrm{outliers}}$ \\")
+latex_lines.append(r"\hline")
+
+# Show a subset of n_fixed values for brevity (4, 5, 6, 7, 8, 9, 10)
+for n_fix in [4, 5, 6, 7, 8, 9, 10]:
+    subset = table_s1b[table_s1b['n_fixed'] == n_fix]
+    for _, row in subset.iterrows():
+        metric = row['Metric']
+        if metric == 'Akaike':
+            metric_label = 'AICc'
+        elif metric == 'MeanCC':
+            metric_label = r'$\overline{CC_p}$'
+        else:
+            metric_label = r'$F_{\mathrm{obj}}$'
+        
+        latex_lines.append(
+            f"{n_fix} & {metric_label} & {row['N_models']:.0f} & {row['Mean']:.2f} & "
+            f"{row['Median']:.2f} & {row['IQR']:.2f} & {row['P5']:.2f}--{row['P95']:.2f} & "
+            f"{row['N_Outliers']:.0f} \\\\"
+        )
+
+latex_lines.append(r"\hline")
+latex_lines.append(r"\textbf{Part C: Sensitivity Analysis (Spearman correlation with $n_{\mathrm{fixed}}$)} & & & & & & & & \\")
+latex_lines.append(r"\hline")
+latex_lines.append(r"Metric & $\rho$ & $p$-value & Interpretation & & & & \\")
+latex_lines.append(r"\hline")
+
+for _, row in table_s1c.iterrows():
+    metric = row['Metric']
+    if metric == 'Akaike':
+        metric_label = 'AICc'
+    elif metric == 'MeanCC':
+        metric_label = r'$\overline{CC_p}$'
+    else:
+        metric_label = r'$F_{\mathrm{obj}}$'
+    
+    interp = "Strong negative" if row['Spearman_rho'] < -0.7 else \
+             "Moderate negative" if row['Spearman_rho'] < -0.3 else \
+             "Weak" if abs(row['Spearman_rho']) < 0.3 else \
+             "Moderate positive" if row['Spearman_rho'] < 0.7 else "Strong positive"
+    
+    latex_lines.append(
+        f"{metric_label} & {row['Spearman_rho']:.3f} & {row['Significance']} & {interp} & & & & \\\\"
+    )
+
+latex_lines.append(r"\hline")
+latex_lines.append(r"\end{tabular}")
+latex_lines.append(r"\end{table}")
+
+# Save LaTeX table
+with open(os.path.join('salidas', 'tableS1_latex.txt'), 'w', encoding='utf-8') as f:
+    f.write('\n'.join(latex_lines))
+
+print(f"    - tableS1_latex.txt (LaTeX-formatted table)")
+print("\n=== Table S1 generation complete ===\n")

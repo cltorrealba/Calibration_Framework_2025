@@ -1,0 +1,129 @@
+
+\section*{SI-X: Validation Diagnostics for Parameter-Fixation Decisions}
+
+\subsection*{Detailed One-at-a-Time Parameter-Fixing Tests}
+
+The following tests evaluate the impact of fixing each currently free parameter on model parsimony (AICc) 
+and predictive skill (R$^2$) in the laboratory validation context.
+
+\begin{table}[H]\centering
+\small
+\caption{One-at-a-time parameter fixing: Changes in AICc and R$^2$ when fixing each free parameter 
+in models 1750, 1860, and 2264 (top-3 MCDM winners). Negative $\Delta\mathrm{AICc}$ indicates improved parsimony; negative 
+$\Delta R^2$ indicates degraded fit. Only parameters that were initially free are shown.}
+\label{tab:SI_X_1_ablation}
+\begin{tabular}{lllrr}
+\toprule
+\textbf{Model} & \textbf{Parameter} & \textbf{$\Delta\mathrm{AICc}$} & \textbf{$\Delta R^2$} \\
+\midrule
+1750 & Kn0 &    +35.0 &   -0.097 \\
+1750 & Kg0 &    +38.3 &   -0.122 \\
+1750 & Kig0 &    -20.0 &   +0.018 \\
+1750 & Yxn &    +80.6 &   -0.400 \\
+1750 & Yxg &     -2.3 &   -0.002 \\
+1750 & Yxf &    +14.2 &   -0.028 \\
+1750 & Yef &   +101.0 &   -0.803 \\
+1860 & Kn0 &    +26.8 &   -0.061 \\
+1860 & Kg0 &    +39.7 &   -0.100 \\
+1860 & Kf0 &    +25.8 &   -0.044 \\
+1860 & Yxn &   +126.8 &   -1.184 \\
+1860 & Yxf &    +16.3 &   -0.025 \\
+1860 & Yeg &    +72.6 &   -0.266 \\
+1860 & Yef &    +91.4 &   -0.446 \\
+2264 & mu0 &    +16.3 &   -0.098 \\
+2264 & betaG0 &    -28.6 &   +0.081 \\
+2264 & betaF0 &    -14.8 &   +0.032 \\
+2264 & Yxn &     -8.4 &   +0.042 \\
+2264 & Yxg &     +1.1 &   -0.020 \\
+2264 & Yeg &    +33.6 &   -0.254 \\
+2264 & Yef &    +58.2 &   -0.634 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{12pt}
+
+\subsection*{Cross-Scale Parameter Shifts (Lab $\leftrightarrow$ Pilot)}
+
+Mann--Whitney $U$ tests and Cliff's $\delta$ (nonparametric effect size) quantify changes in parameter 
+distributions when moving from laboratory to pilot scale. Large effect sizes and low $p$-values 
+($p < 0.01$, marked **) indicate significant structural shifts that may affect model transferability.
+
+\begin{table}[H]\centering
+\small
+\caption{Cross-scale parameter distribution shifts. Cliff's $\delta \in [-1, 1]$ quantifies effect size: 
+$\delta \approx 0$ indicates complete overlap; $\delta = \pm 1$ indicates no overlap. 
+Significance codes: $**$ = $p < 0.01$, $*$ = $p < 0.05$, ns = not significant.}
+\label{tab:SI_X_2_param_transfer}
+\begin{tabular}{lllrrll}
+\toprule
+\textbf{Model} & \textbf{Parameter} & \textbf{Lab Mean} & \textbf{Pilot Mean} & 
+\textbf{Cliff's $\delta$} & \textbf{Signif.} \\
+\midrule
+1750 & Kn0 &       0.0807 &       0.0173 &       +1.00 &       ** \\
+1750 & Kg0 &         44.5 &         26.3 &       +1.00 &       ** \\
+1750 & Kig0 &          239 &          135 &       +1.00 &       ** \\
+1750 & Yxn &         52.4 &         35.5 &       +1.00 &       ** \\
+1750 & Yxg &         8.56 &         15.4 &       -1.00 &       ** \\
+1750 & Yxf &         7.27 &         7.81 &       -0.21 &       ** \\
+1750 & Yef &         1.24 &        0.839 &       +1.00 &       ** \\
+1860 & Kn0 &       0.0578 &       0.0273 &       +1.00 &       ** \\
+1860 & Kg0 &           40 &         53.3 &       -0.87 &       ** \\
+1860 & Kf0 &           36 &         60.4 &       -1.00 &       ** \\
+1860 & Yxn &          101 &         70.3 &       +1.00 &       ** \\
+1860 & Yxf &         7.23 &         7.42 &       -0.10 &       ** \\
+1860 & Yeg &        0.962 &            1 &       -0.13 &       ** \\
+1860 & Yef &          1.2 &        0.931 &       +1.00 &       ** \\
+2264 & mu0 &        0.141 &        0.278 &       -1.00 &       ** \\
+2264 & betaG0 &        0.309 &         0.43 &       -1.00 &       ** \\
+2264 & betaF0 &         0.39 &        0.518 &       -1.00 &       ** \\
+2264 & Yxn &         37.1 &           29 &       +0.99 &       ** \\
+2264 & Yxg &         3.32 &         3.34 &       -0.04 &       ns \\
+2264 & Yeg &        0.622 &        0.782 &       -1.00 &       ** \\
+2264 & Yef &        0.955 &        0.881 &       +0.52 &       ** \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{12pt}
+
+\subsection*{Thermal Sensitivity: RMSD by Temperature Tercile}
+
+To assess whether prediction errors inflate under thermal stress, we stratify pilot-scale 
+RMSD (Root Mean Square Deviation) by temperature terciles: T1 (cool), T2 (mid), T3 (hot). 
+The ratio RMSD$_{\mathrm{hot}}$/RMSD$_{\mathrm{cool}}$ quantifies thermal sensitivity. 
+Values close to 1 indicate robust performance across the temperature range.
+
+\begin{table}[H]\centering
+\small
+\caption{Thermal sensitivity indicators: RMSD stratified by temperature tercile. 
+Ratio (Hot/Cool) quantifies error inflation under thermal stress; values near 1.0 
+are preferred.}
+\label{tab:SI_X_3_thermal_sensitivity}
+\begin{tabular}{lllrrrr}
+\toprule
+\textbf{Model} & \textbf{Exper.} & \textbf{Variable} & \textbf{RMSD$_{\mathrm{cool}}$} & 
+\textbf{RMSD$_{\mathrm{hot}}$} & \textbf{Ratio} \\
+\midrule
+1750 & 5 & Fructose &           1.364 &           7.228 &     5.30 \\
+1750 & 5 & Glucose &           6.725 &           8.009 &     1.19 \\
+1750 & 5 & YAN &           0.033 &           0.016 &     0.48 \\
+1750 & 6 & Fructose &           0.205 &           7.923 &    38.62 \\
+1750 & 6 & Glucose &          13.200 &           6.934 &     0.53 \\
+1750 & 6 & YAN &           0.000 &           0.002 &    45.77 \\
+1860 & 5 & Fructose &          14.793 &           2.380 &     0.16 \\
+1860 & 5 & Glucose &          11.818 &          17.406 &     1.47 \\
+1860 & 5 & YAN &           0.052 &           0.033 &     0.64 \\
+1860 & 6 & Fructose &           5.308 &          24.522 &     4.62 \\
+1860 & 6 & Glucose &          17.878 &          20.287 &     1.13 \\
+1860 & 6 & YAN &           0.038 &           0.002 &     0.05 \\
+2264 & 5 & Fructose &           6.150 &          12.971 &     2.11 \\
+2264 & 5 & Glucose &           2.266 &           3.054 &     1.35 \\
+2264 & 5 & YAN &           0.030 &           0.025 &     0.86 \\
+2264 & 6 & Fructose &           6.948 &           3.232 &     0.47 \\
+2264 & 6 & Glucose &           2.667 &           3.222 &     1.21 \\
+2264 & 6 & YAN &           0.000 &           0.002 & 10186.75 \\
+\bottomrule
+\end{tabular}
+\end{table}
+

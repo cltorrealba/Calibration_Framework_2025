@@ -8,6 +8,16 @@ from monte_carlo_module import run_monte_carlo, plot_simulation_ensemble, COLORB
 from model_ci_loader import load_kfixed_vector
 
 
+# Mapeo consistente de modelo_id a color (Dark palette - profesional)
+# Garantiza que cada modelo tenga el mismo color en todos los gráficos
+MODEL_COLOR_MAP = {
+    1750: '#1b9e77',  # Verde oscuro
+    1860: '#d95f02',  # Naranja oscuro
+    2264: '#7570b3',  # Púrpura oscuro
+    1:    '#e7298a',  # Rojo/magenta (baseline)
+}
+
+
 def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
@@ -20,7 +30,7 @@ def save_overlay_for_experiment(models: List[int], exper_id: int, scale_id: int,
     variables = ['YAN', 'Glucose', 'Fructose', 'Temperature']
 
     for i, model_id in enumerate(models):
-        color = COLORBLIND_PALETTE[i % len(COLORBLIND_PALETTE)]
+        color = MODEL_COLOR_MAP.get(model_id, COLORBLIND_PALETTE[i % len(COLORBLIND_PALETTE)])
         marker = markers[i % len(markers)]
         T, X, ctx = run_monte_carlo(model_id, scale_id, exper_id, kfixed_0,
                                      n_runs=n_runs, random_seed=seed)
@@ -52,8 +62,8 @@ def save_overlay_for_experiment(models: List[int], exper_id: int, scale_id: int,
     fig.suptitle(f"Experimento {exper_id} – Scale {scale_id}: Modelos ganadores y baseline")
     fig.tight_layout()
     ensure_dir(out_dir)
-    out_path = os.path.join(out_dir, f"ensemble_winners_E{exper_id}_S{scale_id}.png")
-    fig.savefig(out_path, dpi=200)
+    out_path = os.path.join(out_dir, f"ensemble_winners_E{exper_id}_S{scale_id}.pdf")
+    fig.savefig(out_path, dpi=300, format='pdf')
     plt.close(fig)
     return out_path
 

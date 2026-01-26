@@ -1,0 +1,60 @@
+FIGURE 4: Three-dimensional robustness landscape
+
+CAPTION (paper-ready)
+3D robustness landscape. Each point (total N = 103) represents a viable model in the indicator space [AICc (min), MNCI (min), RSQ2 (max), GSS (max)], scaled by min–max normalization to [0, 1] for comparability. Colour (viridis) encodes GSS (max). Top-15 models are outlined in blue; only models selected by any MCDM method–scenario (>= 1 vote) are labeled, and the best-ranked model (1750) is marked with a red star. Dashed lines project highlighted models onto the RSQ2 = 0 plane for spatial reference.
+
+OVERVIEW
+This figure presents all viable kinetic models (N = 103) in a three-dimensional Cartesian space defined by three of the four robustness criteria: AICc (x-axis, min.), MNCI (y-axis, min.), and RSQ2 (z-axis, max.). The fourth criterion, GSS (Global Sensitivity Sum), is encoded as a continuous color map (viridis), creating a 4-D visualization compressed into 3-D plus color.
+
+NORMALIZATION & SCALING
+All four criteria are min-max scaled to [0, 1] to ensure comparability across different measurement units and ranges:
+- AICc (Akaike Information Criterion corrected): Lower values indicate better parsimony-adjusted fit
+- MNCI (Mean Normalized Confidence Interval): Lower values indicate more identifiable parameters
+- RSQ2 (Coefficient of determination): Higher values indicate better goodness-of-fit
+- GSS: Continuous color scale (yellow to purple in viridis); higher GSS indicates greater integrated sensitivity across all parameters
+
+POINT REPRESENTATION
+- Gray points: Pool of viable models (edge outlined in black for legibility)
+- Blue-outlined circles (N = 15): Top-15 models (ranked by votes, then fitness) — all are drawn above the gray pool with higher z-order
+- Orange-outlined circles: Voted models that are not in the Top-15 (>= 1 vote in any of the 7×5 method–scenario combinations)
+- Red star: Best-ranked model (FFF = 1750), highest consensus vote count and median fitness score; filled red with blue outline superseded by red
+
+PROJECTIONS & CONTEXT
+Dashed vertical lines emanate from each highlighted model (Top-15 and/or voted) and project downward to the z = 0 plane (RSQ2 = 0 baseline). These projections aid in spatial localization and help identify which highlighted models cluster in high-RSQ2 regions versus lower-fit regions.
+
+INTERPRETATION & INSIGHTS
+
+1. **Landscape Topology**: 
+   - Dense clustering of gray points indicates that most viable models exhibit similar robustness profiles
+   - Separation of blue- and orange-outlined points from the gray cloud suggests that highlighted models occupy distinct regions with differentiated parsimony-fit-identifiability trade-offs
+   - The red star's isolation emphasizes model 1750's unique balance
+
+2. **Parsimony-Fit Trade-off** (AICc vs RSQ2 planes):
+   - Models spreading along the AICc axis span a range of complexity penalties; fixing more parameters generally increases AICc (x-axis) but may improve identifiability
+   - Spread along the RSQ2 axis shows that not all parsimonious models achieve equally high fit; the voted models tend to occupy mid-to-high RSQ2 zones (z > 0.5)
+
+3. **Identifiability Landscape** (MNCI axis):
+   - Lower MNCI (y-axis) indicates more confidently estimated parameters
+   - Highlighted models cluster at intermediate MNCI values, reflecting a balance between keeping parameters fixed to reduce confidence intervals and leaving enough free parameters to fit data
+
+4. **Sensitivity Allocation** (Color gradient):
+   - Models with high GSS (purple-tinted) exhibit concentrated sensitivity in a few parameters
+   - Models with low GSS (yellow-tinted) distribute sensitivity more broadly
+   - The highlighted subset spans a range of GSS values, indicating that consensus models are insensitive to the particular choice of sensitivity metric weighting
+
+METHODOLOGICAL CONTEXT
+This landscape is constructed from viable Stage II models (CCc = 0 and I955 = 0 criteria satisfied) that were further filtered to include only those with complete robustness metrics from Monte Carlo cross-validation and transfer simulations. The multi-criteria decision-making framework employed 7 methods (TOPSIS, LINMAP, VIKOR, SAW, MEW, GRA, FUCA) × 5 weighting scenarios (No-priority, Parsimony, Goodness-of-fit, Identifiability, Sensitivity), yielding 35 independent rankings; consensus (>= 1 vote) models are those appearing in the top position across at least one method-scenario combination.
+
+PUBLICATION USAGE
+This figure supports the identification of parsimonious yet robust models suitable for transfer to pilot-scale or industrial fermentation systems. The prominence of model 1750 and its relative isolation in robustness space justifies its selection as the recommended candidate for downstream validation and scaling studies. The broader voted subset (orange points) provides alternative candidates should model 1750 fail in independent validation or exhibit unforeseen constraints in the target application.
+
+TECHNICAL NOTES
+- Projection plane (z = 0) represents the minimum acceptable RSQ2 threshold; models below this line would indicate poor fit and are typically not visible in the positive z-region
+- View angle (elevation = 28°, azimuth = 38°) is selected to minimize occlusion of overlapping points while maintaining visual balance
+- Colorbar (bottom, GSS normalized scale) provides a continuous reference for interpreting the sensitivity allocation across the entire landscape
+- All axes are labeled in bold, larger font (11 pt) and are positioned close to their respective axes for clarity and space efficiency
+
+INTEGRATION WITH OTHER FIGURES
+- Figure 1 (Model Selection by Scenario) provides the voting breakdown underlying the consensus identification shown here
+- Figure 3 (Fixed Parameter Heatmap) shows the structural details of the top-15 models, including model 1750 highlighted in red
+- Figure 5 (PCA of Top-15 Models) reveals the internal variation structure among the voted subset, showing how individual parameters and robustness metrics co-vary

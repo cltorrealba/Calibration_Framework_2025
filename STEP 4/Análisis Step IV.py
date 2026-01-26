@@ -502,7 +502,6 @@ id2pos = dict(zip(sorted(voted_ids), x_positions))
 for ax, (scen, _) in zip(axes, WEIGHT_SCENARIOS.items()):
     winners = pd.DataFrame([r for r in results if r['scenario'] == scen])
     winners = winners[winners['best_model'].isin(voted_ids)]
-    ax.set_title(f"Scenario: {scen}", loc='left', fontweight='bold')
     for i, method in enumerate(MCDM_FUNCS):
         chosen = winners.loc[winners['method'] == method, 'best_model']
         ax.scatter([id2pos[x] for x in chosen], np.full_like(chosen, i),
@@ -513,7 +512,8 @@ for ax, (scen, _) in zip(axes, WEIGHT_SCENARIOS.items()):
     ax.grid(axis='x', linestyle='--', alpha=.3)
 
 fig1.savefig(os.path.join(OUTPUT_DIR,'Fig1_model_selection_by_scenario.png'), dpi=300)
-plt.show()
+fig1.savefig(os.path.join(OUTPUT_DIR,'Fig1_model_selection_by_scenario.pdf'), dpi=300)
+plt.close(fig1)
 
 # ─────────────────────────  FIGURE 2  ─────────────────────────
 rank_matrix = score_mat.copy()
@@ -523,11 +523,10 @@ plt.figure(figsize=(10, max(6, 0.35*len(fitness))))
 sns.heatmap(fitness, cmap='viridis', vmin=0, vmax=1,
             cbar_kws={'label': 'Relative fitness (1 = best)'})
 plt.xlabel("Method–Scenario"); plt.ylabel("Model ID")
-plt.title("Figure 2 – Relative fitness across methods & scenarios",
-          loc='left', fontweight='bold')
 plt.tight_layout();
 plt.savefig(os.path.join(OUTPUT_DIR,'Fig2_fitness_heatmap.png'), dpi=300)
-plt.show()
+plt.savefig(os.path.join(OUTPUT_DIR,'Fig2_fitness_heatmap.pdf'), dpi=300)
+plt.close()
 
 # ─────────────────────────  FIGURE 3  ─────────────────────────
 from matplotlib.colors import ListedColormap
@@ -547,109 +546,154 @@ sns.heatmap(matrix, cmap=cmap, cbar=False,
             yticklabels=[str(x) for x in pattern.index.tolist()],
             xticklabels=[PARAM_LABELS[c] for c in PARAM_COLS])
 plt.xticks(rotation=45, ha='right')
-plt.title("Figure 3 – Fixed parameters (black);\nBest model highlighted in red",
-          loc='left', pad=10, fontweight='bold')
 plt.tight_layout()
 plt.savefig(os.path.join(OUTPUT_DIR,'Fig3_param_pattern.png'), dpi=300)
-plt.show()
+plt.savefig(os.path.join(OUTPUT_DIR,'Fig3_param_pattern.pdf'), dpi=300)
+plt.close()
 # ─────────────────────────  FIGURE 4  –  pool completo + voted destacados  ─────────────────────────
 indicators = ['AICc', 'MNCI', 'RSQ2', 'GSS']
 scaled = models[indicators].apply(lambda c: (c - c.min()) / (c.max() - c.min()))
 
-fig4 = plt.figure(figsize=(9, 7))
+fig4 = plt.figure(figsize=(8.5, 8.5), dpi=150)
 ax4 = fig4.add_subplot(111, projection='3d', proj_type='persp')
 from typing import Any
 ax4_t: Any = ax4
 
-# ❶  Pool completo (color-map viridis por GSS)
+# ❶  Pool completo (color-map viridis por GSS) con contorno delgado
 x = np.asarray(scaled['AICc'].to_list(), dtype=float)
 y = np.asarray(scaled['MNCI'].to_list(), dtype=float)
 z = np.asarray(scaled['RSQ2'].to_list(), dtype=float)
 colours = np.asarray(scaled['GSS'].to_list(), dtype=float)
 scatter = ax4_t.scatter(x, y, z, c=colours, cmap='viridis',
-                        s=50, alpha=.35)
+                        s=50, alpha=.35, edgecolors='black', linewidth=0.4)
 
-# ❷  Modelos con ≥1 voto — resaltados encima
-for mid in voted_ids:
+# ❷  Top-15 modelos — marcados con contorno azul (TODOS, incluso sin votos)
+for mid in top15_ids:
+    if mid not in scaled.index:
+        continue
     vals = scaled.loc[mid, ['AICc', 'MNCI', 'RSQ2']].values.astype(float).ravel()
     xi, yi, zi = float(vals[0]), float(vals[1]), float(vals[2])
     is_best = mid == best_id
+    is_voted = mid in voted_ids
+    
+    # Plotear marcador con contorno azul (visible encima del pool)
     ax4_t.scatter(xi, yi, zi,
                 c='red' if is_best else 'none',      # relleno rojo solo si best
-                s=180 if is_best else 110,
+                s=200 if is_best else 140,           # tamaño aumentado para visibilidad
                 marker='*' if is_best else 'o',
-                edgecolor='red' if is_best else 'orange',
-                linewidth=1.2, zorder=5)
-    ax4.text(xi, yi, zi,
-             f" {mid}", color='red' if is_best else 'black',
-             fontsize=9, zorder=6)
+                edgecolor='red' if is_best else 'blue',
+                linewidth=2.0 if is_best else 1.5, zorder=10)  # zorder alto para estar encima
+    
+    # Labels solo para modelos seleccionados por MCDM (voted) o best
+    if is_voted or is_best:
+        ax4.text(xi, yi, zi,
+                 f" {mid}", color='red' if is_best else 'black',
+                 fontsize=9, fontweight='bold', zorder=11)
+    
     # Proyección a z = 0
     ax4_t.plot([xi, xi], [yi, yi], [0, zi],
              linestyle='--', linewidth=.8,
-             color='red' if is_best else 'orange', alpha=.8, zorder=4)
+             color='red' if is_best else 'orange', alpha=.8, zorder=9)
 
-# Ejes, rótulos y estilo
-ax4.set_xlabel('AICc (scaled)', labelpad=12)
-ax4.set_ylabel('MNCI (scaled)', labelpad=12)
-ax4.set_zlabel('RSQ2 (scaled)', labelpad=18);
+# ❸  Modelos voted que NO están en top-15 — contorno naranja más pequeño
+for mid in voted_ids:
+    if mid in top15_ids:
+        continue  # ya están procesados arriba
+    if mid not in scaled.index:
+        continue
+    vals = scaled.loc[mid, ['AICc', 'MNCI', 'RSQ2']].values.astype(float).ravel()
+    xi, yi, zi = float(vals[0]), float(vals[1]), float(vals[2])
+    ax4_t.scatter(xi, yi, zi,
+                c='none',
+                s=100,
+                marker='o',
+                edgecolor='orange',
+                linewidth=1.0, zorder=8)
+    ax4.text(xi, yi, zi,
+             f" {mid}", color='black',
+             fontsize=9, fontweight='bold', zorder=8)
+    # Proyección a z = 0
+    ax4_t.plot([xi, xi], [yi, yi], [0, zi],
+             linestyle='--', linewidth=.8,
+             color='orange', alpha=.8, zorder=7)
 
-ax4.set_title("Figure 4 – 3-D robustness landscape\n"
-              "Color = GSS (scaled); voted models highlighted; * = best model",
-              loc='left', fontweight='bold', pad=15)
+# Ejes, rótulos y estilo (títulos más grandes y negrita)
+ax4.set_xlabel('AICc (norm.)', labelpad=5, fontsize=11, fontweight='bold')
+ax4.set_ylabel('MNCI (norm.)', labelpad=5, fontsize=11, fontweight='bold')
+ax4.set_zlabel('RSQ2 (norm.)', labelpad=6, fontsize=11, fontweight='bold')
 
-fig4.colorbar(scatter, label='GSS (scaled)', shrink=0.6)
+# Remover el título del gráfico
+# (No añadir fig4.suptitle)
+
+# Colorbar vertical a la derecha, más pequeña y mucho más hacia la izquierda
+cbar = fig4.colorbar(scatter, ax=ax4, label='', shrink=0.3, pad=-0.20, aspect=12, orientation='vertical', anchor=(0.0, 0.6))
+cbar.ax.tick_params(labelsize=10)
+cbar.set_label('GSS (norm.)', fontsize=11, fontweight='bold', labelpad=6)
+
 ax4.view_init(elev=28, azim=38)
-fig4.subplots_adjust(left=0.18, right=0.96, bottom=0.12, top=0.92)
-fig4.savefig(os.path.join(OUTPUT_DIR,'Fig4_robustness_landscape.png'), dpi=300)
-plt.show()
+
+# Ajustar márgenes: comprimir figura para máxima compacidad
+fig4.subplots_adjust(left=0.15, right=0.92, bottom=0.08, top=0.92)
+
+# Guardar en alta resolución con márgenes mínimos
+fig4.savefig(os.path.join(OUTPUT_DIR,'Fig4_robustness_landscape.png'), dpi=600, bbox_inches='tight', pad_inches=0.15)
+fig4.savefig(os.path.join(OUTPUT_DIR,'Fig4_robustness_landscape.pdf'), dpi=600, bbox_inches='tight', pad_inches=0.25)
+plt.close(fig4)
 # ─────────────────────────  FIGURE 5  ─────────────────────────
 ROBUST_COLS = ['AICc', 'MNCI', 'RSQ2', 'GSS']
-X = models.loc[top15_ids, ROBUST_COLS].copy()
-scs = StandardScaler().fit_transform(X)
-pca = PCA(2).fit(scs)
-sc = pca.transform(scs);  expl = pca.explained_variance_ratio_ * 100
+X_all = models[ROBUST_COLS].copy()
+scs_all = StandardScaler().fit_transform(X_all)
+pca = PCA(2).fit(scs_all)
+sc_all = pca.transform(scs_all);  expl = pca.explained_variance_ratio_ * 100
+
+# proyectar solo top 15 para labels
+sc_top15 = sc_all[models.index.isin(top15_ids)]
 
 fig5, ax5 = plt.subplots(figsize=(7, 6))
-ax5.scatter(sc[:, 0], sc[:, 1], c='gray', alpha=.6, s=60)
-for i, mid in enumerate(top15_ids):
-    ax5.text(sc[i, 0], sc[i, 1], f" {mid}",
-             color='red' if mid == best_id else 'black',
+# ❶ Todos los modelos en gris
+ax5.scatter(sc_all[:, 0], sc_all[:, 1], c='gray', alpha=.35, s=40)
+# ❷ Top 15 en azul encima
+ax5.scatter(sc_top15[:, 0], sc_top15[:, 1], c='blue', alpha=.8, s=70, edgecolor='none')
+# ❸ Labels solo para top 15
+for mid in top15_ids:
+    idx = models.index.get_loc(mid)
+    ax5.text(sc_all[idx, 0], sc_all[idx, 1], f" {mid}",
+             color='red' if mid == best_id else 'blue',
              fontsize=8, fontweight='bold' if mid == best_id else 'normal')
 
-# vectores – indicadores
+# vectores – indicadores (verde, como están)
 for v, vec in zip(ROBUST_COLS, pca.components_.T):
     ax5.arrow(0, 0, vec[0]*3, vec[1]*3,
               head_width=.08, head_length=.1,
               color='green', linewidth=1.2)
     ax5.text(vec[0]*3.3, vec[1]*3.3, v, color='green', fontsize=9,fontweight='bold')
 
-# vectores – parámetros
+# vectores – parámetros (ROJO, no negro)
 for p in PARAM_COLS:
-    vals = struct_df.set_index('model_id').loc[top15_ids, p].astype(float).to_numpy()
+    vals = struct_df.set_index('model_id')[p].reindex(models.index).astype(float).to_numpy()
     if np.var(vals) == 0:
         continue
     z_arr = (vals - np.mean(vals)) / (np.std(vals, ddof=0) if np.std(vals, ddof=0)>0 else 1.0)
-    c1 = np.corrcoef(z_arr, sc[:, 0])[0, 1]
-    c2 = np.corrcoef(z_arr, sc[:, 1])[0, 1]
+    c1 = np.corrcoef(z_arr, sc_all[:, 0])[0, 1]
+    c2 = np.corrcoef(z_arr, sc_all[:, 1])[0, 1]
     ax5.arrow(0, 0, c1*5, c2*5,
               head_width=.05, head_length=.07,
-              color='black', linewidth=.9, alpha=.85)
+              color='red', linewidth=.9, alpha=.85)
     ax5.text(c1*5*1.08, c2*5*1.08, PARAM_LABELS[p], fontsize=7)
 
 ax5.axhline(0, ls='--', lw=.5, color='grey')
 ax5.axvline(0, ls='--', lw=.5, color='grey')
 ax5.set_xlabel(f"PC1 ({expl[0]:.1f}%)")
 ax5.set_ylabel(f"PC2 ({expl[1]:.1f}%)")
-ax5.set_title("Figure 5 – PCA of Top-15 models\n"
-              "Green = robustness vectors  •  Black = parameter vectors",
-              loc='left', fontweight='bold', pad=12)
 
 # quitar el cuadro alrededor del gráfico
 for spine in ax5.spines.values():
     spine.set_visible(False)
 
-plt.tight_layout();  fig5.savefig(os.path.join(OUTPUT_DIR,'Fig5_PCA.png'), dpi=300)
-plt.show()
+plt.tight_layout()
+fig5.savefig(os.path.join(OUTPUT_DIR,'Fig5_PCA.png'), dpi=300)
+fig5.savefig(os.path.join(OUTPUT_DIR,'Fig5_PCA.pdf'), dpi=300)
+plt.close(fig5)
 # ─────────────────────────  FIGURE 6  –  Composite 2×2  ─────────────────────────
 import matplotlib.image as mpimg
 fig6, axes6 = plt.subplots(2, 2, figsize=(13, 11))
@@ -666,6 +710,7 @@ for ax, fname in zip(axes6.flat, panel_files):
     ax.imshow(img)
     ax.axis('off')
 
-fig6.suptitle("Figure 6 – Consolidated overview (Figures 1, 3, 4 & 5)",
-              fontsize=16, fontweight='bold', y=0.96)
-plt.tight_layout(); fig6.savefig(os.path.join(OUTPUT_DIR,'Fig6_composite.png'), dpi=300); plt.show()
+plt.tight_layout()
+fig6.savefig(os.path.join(OUTPUT_DIR,'Fig6_composite.png'), dpi=300)
+fig6.savefig(os.path.join(OUTPUT_DIR,'Fig6_composite.pdf'), dpi=300)
+plt.close(fig6)

@@ -180,10 +180,10 @@ def plot_simulation_ensemble(T, X_ensemble, ctx,
             # fill CI without legend
             ax.fill_between(t_full, lower[:, j], upper[:, j], color=color, alpha=0.3)
 
-            # experimental points
+            # experimental points - solid fill, foreground (zorder=10)
             if is_primary and y_true is not None:
-                ax.scatter(t_samples, y_true, marker=exp_marker, edgecolor=color, facecolor='white', s=50,
-                           label=f'{label} exp E{exper_id}')
+                ax.scatter(t_samples, y_true, marker=exp_marker, edgecolor='black', facecolor='black', s=60,
+                           label=f'{label} exp E{exper_id}', zorder=10, linewidths=1.5)
 
         ax.set_title(label)
         ax.set_xlabel('Time [h]')

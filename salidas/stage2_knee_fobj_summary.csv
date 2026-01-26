@@ -1,0 +1,2 @@
+knee_fobj,knee_retention,knee_retention_ci_lo,knee_retention_ci_hi,knee_N_all,knee_N_retained,knee_mean_nfree,knee_nfree_ci_lo,knee_nfree_ci_hi,knee_deflection_angle_deg,spearman_rho_fobj_retention,spearman_rho_fobj_nfree,retention_slope_left,retention_slope_right
+0.6094501970542943,0.36363636363636365,0.19732972772607899,0.5704865065628195,22,8,5.25,4.76,5.74,150.27687835579715,0.4535714285714285,-0.29874824189067634,3.59455938689438,-3.958745008987626

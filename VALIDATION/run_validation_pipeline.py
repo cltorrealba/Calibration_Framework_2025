@@ -21,9 +21,9 @@ kfixed_0 = np.array([
 ])
 
 # Configuración (según Main_Validacion.py)
-models = [1750]         # estructura representativa
-lab_expers = [6, 7]     # validación laboratorio
-pilot_expers = [5, 6]   # validación piloto
+models = [1750, 1860, 2264]  # Top-3 MCDM winners
+lab_expers = [6, 7]          # validación laboratorio
+pilot_expers = [5, 6]        # validación piloto
 
 if __name__ == "__main__":
     # Quiet mode for cleaner logs

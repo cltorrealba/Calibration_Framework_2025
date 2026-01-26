@@ -158,15 +158,46 @@ heatmap_rows = []
 for r,n_par in enumerate(tiers):
     sub = dfM[dfM["estim_params"]==n_par].copy()
     sel = sub["RSQ2"]>=q75
-    # A: FixFreq
-    axF=axes[r,0]; x=np.arange(TOTAL_PARAMS); bw=0.35
-    axF.bar(x-bw/2, freq_pool, width=bw, color=PAL_GRAY, alpha=0.35, label="All")
-    axF.bar(x+bw/2, (sub.loc[sel,PARAM_COLS]==1).mean()*100,
-            width=bw, color=PAL_BLUE, alpha=0.85, label="Top")
-    axF.set_xticks(x); axF.set_xticklabels([param_labels[p] for p in PARAM_COLS], rotation=90)
-    axF.set_ylabel("% fixed"); axF.set_ylim(0,100)
-    if r==0: axF.legend(loc="upper right", fontsize=9)
-    axF.set_title(f"(A) FixFreq – {n_par} free")
+    # A: PCA loadings (parameter correlations with PC1 and PC2)
+    axF=axes[r,0]
+    # Compute PCA on robustness indices (all models, not just q75)
+    if len(sub) >= 3:
+        X = sub[ROBUST_COLS].copy(); X["AICc"]*=-1; X["MNCI"]*=-1
+        Xs = StandardScaler().fit_transform(X)
+        pca = PCA(2).fit(Xs)
+        sc = pca.transform(Xs)
+        expl = pca.explained_variance_ratio_ * 100
+        
+        # Compute correlation of each parameter (0/1) with PC1 and PC2
+        loadings_pc1 = []
+        loadings_pc2 = []
+        for p in PARAM_COLS:
+            v = sub[p].values
+            std = v.std(ddof=0)
+            if std > 0:
+                z = (v - v.mean()) / std
+                corr1 = np.corrcoef(z, sc[:, 0])[0, 1]
+                corr2 = np.corrcoef(z, sc[:, 1])[0, 1]
+                loadings_pc1.append(corr1)
+                loadings_pc2.append(corr2)
+            else:
+                loadings_pc1.append(0)
+                loadings_pc2.append(0)
+        
+        # Plot loadings as grouped bars
+        x = np.arange(TOTAL_PARAMS); bw = 0.35
+        axF.bar(x-bw/2, loadings_pc1, width=bw, color=PAL_BLUE, alpha=0.85, label=f"PC1 ({expl[0]:.1f}%)")
+        axF.bar(x+bw/2, loadings_pc2, width=bw, color=PAL_GRN, alpha=0.85, label=f"PC2 ({expl[1]:.1f}%)")
+        axF.axhline(0, color='black', linewidth=0.5, linestyle='-')
+        axF.set_xticks(x); axF.set_xticklabels([param_labels[p] for p in PARAM_COLS], rotation=90)
+        axF.set_ylabel("Correlation"); axF.set_ylim(-1, 1)
+        if r==0: axF.legend(loc="upper right", fontsize=9)
+        axF.set_title(f"(A) PC Correlations – {n_par} free")
+    else:
+        # Fallback: insufficient data for PCA
+        axF.text(0.5, 0.5, "Insufficient data\nfor PCA", ha='center', va='center', transform=axF.transAxes)
+        axF.set_title(f"(A) PC Correlations – {n_par} free")
+        axF.set_xticks([]); axF.set_yticks([])
 
     # B: PCA / parallel + bold offset label for model 1750
     axP=axes[r,1]
