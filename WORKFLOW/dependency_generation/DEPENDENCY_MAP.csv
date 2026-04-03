@@ -1,0 +1,10 @@
+artifact,workflow_step,filename,description,upstream_script
+it_2023.mat,01_HIPPO_Identification,it_2023.mat,HIPPO iteration tree with all model structures,HIPPO.m
+VMS_it_2023.txt,01_HIPPO_Identification,VMS_it_2023.txt,Viable model structure list,HIPPO.m
+HIPPO_result.xlsx,02_CrossValidation_Calibration,HIPPO_result.xlsx,Compiled HIPPO results for Python analysis,reg_analysis.m
+Zenteno_IC_LAB_5PERC_2023b_WSComplete.xlsx,02_CrossValidation_Calibration,Zenteno_IC_LAB_5PERC_2023b_WSComplete.xlsx,LAB-scale cross-validation IC results with CI/AICc,Process_IC_Corrected.m
+Zenteno_IC_PIL_5PERC.xlsx,02_CrossValidation_Calibration,Zenteno_IC_PIL_5PERC.xlsx,PIL-scale cross-validation IC results,Process_IC_Corrected.m
+Zenteno_Final_2023b_WS.xlsx,03_Model_Selection_MCDM,Zenteno_Final_2023b_WS.xlsx,MCDM criteria matrix (parsimony/significance/performance/sensitivity),Model_Structures_2023b.m
+Zenteno_Model_Indexes_2023b.txt,03_Model_Selection_MCDM,Zenteno_Model_Indexes_2023b.txt,Indices of viable model structures for MCDM,Model_Structures_2023b.m
+Zenteno_IC_PIL_5PERC_2023.xlsx,04_Scaleup_Validation,Zenteno_IC_PIL_5PERC_2023.xlsx,PIL-scale IC results (2023 version),Process_IC_PIL_2023.m
+2023_5_perc_Models_Z_PIL_Corrected.mat,04_Scaleup_Validation,2023_5_perc_Models_Z_PIL_Corrected.mat,PIL CV optimization results,All_CV_Main_PIL.m

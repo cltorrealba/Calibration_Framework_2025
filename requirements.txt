@@ -1,0 +1,17 @@
+# Python dependencies (for RESULT ANALYSIS scripts)
+numpy>=1.24
+pandas>=2.0
+scipy>=1.10
+matplotlib>=3.7
+seaborn>=0.12
+scikit-learn>=1.3
+statsmodels>=0.14
+openpyxl>=3.1
+kmodes>=0.12
+
+# MATLAB dependencies (for WORKFLOW scripts — not pip-installable)
+# - MATLAB R2020b+ (tested R2023a/R2023b)
+# - Optimization Toolbox
+# - Statistics and Machine Learning Toolbox
+# - Parallel Computing Toolbox
+# - MEIGO64 toolbox (included in Toolboxes/MEIGO64/)

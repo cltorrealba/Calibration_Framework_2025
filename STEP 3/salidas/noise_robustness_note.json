@@ -1,3 +1,0 @@
-{
-  "note": "No noise-level specific metrics (e.g., *_sigma2, *_sigma10) found; re-run MC\u2013CV at \u03c3=2% and 10% to enable this check."
-}

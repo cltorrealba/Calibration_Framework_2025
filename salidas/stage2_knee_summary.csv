@@ -1,2 +1,0 @@
-range_min_n_free,range_max_n_free,knee_n_free,knee_retention,knee_retention_ci_lo,knee_retention_ci_hi,knee_N_all,knee_N_retained,knee_Fobj_mean,knee_Fobj_ci_lo,knee_Fobj_ci_hi,knee_Fobj_n,knee_deflection_angle_deg,retention_slope_left,retention_slope_right,spearman_rho_nfree_retention,spearman_rho_nfree_fobjmean
-3,9,7,0.10434782608695652,0.08716287439376605,0.12445899365618496,1035,108,0.2142945913424595,0.186695149306512,0.24189403337840704,108,3.7,-0.14383619328350356,-0.07841772462134208,-1.0,0.07142857142857144

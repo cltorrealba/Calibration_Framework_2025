@@ -1,0 +1,32 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+.venv/
+venv/
+.env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Generated outputs
+salidas/
+**/salidas/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# MATLAB temporary files
+*.asv
+~$*.xlsx
+
+# MEIGO compiled MEX (platform-specific, rebuild locally)
+*.mexa64
+*.mexmaci64
+*.mexw32
+*.mexw64

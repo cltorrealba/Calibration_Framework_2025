@@ -1,2 +1,0 @@
-total_models,retained_models,retention_rate_pct,elimination_rate_pct,n_fixed_all_mean,n_fixed_all_median,n_fixed_all_min,n_fixed_all_max,n_fixed_sel_mean,n_fixed_sel_median,n_fixed_sel_min,n_fixed_sel_max,estim_params_all_mean,estim_params_all_min,estim_params_all_max,estim_params_sel_mean,estim_params_sel_min,estim_params_sel_max,avg_complexity_reduction_mean_pars,effect_size_nfixed_cohens_d,Np_max_stageII,complexity_threshold_Np_minus_2,models_below_threshold_in_stageII
-4147,630,15.19,84.81,5.799,6.0,0,10,7.397,7.0,4,10,7.201,3,13,5.603,3,9,1.598,1.056,9,7,497
