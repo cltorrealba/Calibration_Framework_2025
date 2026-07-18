@@ -1,0 +1,11 @@
+check_id,scope,status,detail
+editable_repository,Calibration_Framework_2025,PASS,branch=article3-multiscale-transfer-pipeline; head=3b46c9361d68b2fa37fabbedbbbf01338bd89db9; in_scope_changes=50; unexpected=0
+bundle_files,governance_bundle,PASS,present=14; missing=
+source_repository,pyomo-doe,PASS,required_sha=33b55bca93f65129eb22592528a4327d572ea3a5; checkout=ctorrealba_fermentation; dirty=False; branch_match=True
+source_repository,DC_dFVB_2026,PASS,required_sha=180d9b4003103dbb5024d7f9d11ae51df2683aca; checkout=agent/paper3-article-bundle; dirty=False; branch_match=False
+source_repository,Tesis,PASS,required_sha=adec3a941ba896dbd350fb037b714ebba614c555; checkout=article; dirty=True; branch_match=True
+model_run_inventory,Pilot_2026,PASS,candidates=5; eligible=4; selected=none
+inventory_smoke,Pilot_2026,PASS,eligible_tables_checked=4; selection=false
+pipeline_pytest,Goal_0_scaffolding,PASS,tests=12; failures=0
+source_structural_checks,read_only_sources,PASS_CONDITIONAL,declared_checks=1
+model_microbenchmark,Pilot_2026,SKIPPED_BY_GATE,no_explicit_approved_run_id;source_preflight_not_clean_and_branch_aligned

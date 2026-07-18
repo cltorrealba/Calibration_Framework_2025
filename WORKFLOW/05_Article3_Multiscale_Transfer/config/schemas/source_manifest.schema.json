@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/article3/source_manifest.schema.json",
+  "title": "Article 3 source repository manifest",
+  "type": "object",
+  "required": ["schema_version", "created_utc", "editable_repository", "sources"],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 1},
+    "created_utc": {"type": "string", "format": "date-time"},
+    "editable_repository": {"type": "object"},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "repository",
+          "root_locator",
+          "required_branch",
+          "required_sha",
+          "current_branch",
+          "current_head",
+          "dirty",
+          "branch_matches_required"
+        ]
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,4 @@
+python -m pytest WORKFLOW/05_Article3_Multiscale_Transfer/tests -q
+python WORKFLOW/05_Article3_Multiscale_Transfer/scripts/00_preflight.py --dry-run --goal-start-sha <goal-start-sha>
+python WORKFLOW/05_Article3_Multiscale_Transfer/scripts/00_preflight.py --goal-start-sha <goal-start-sha>
+python fermentation_model/tools/campaign_audit.py --check-hashes

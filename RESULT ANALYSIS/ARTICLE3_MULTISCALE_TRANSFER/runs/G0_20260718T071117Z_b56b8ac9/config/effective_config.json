@@ -1,0 +1,126 @@
+{
+  "compute_budget": {
+    "blas_threads_per_worker": 1,
+    "bootstrap_replicates": 0,
+    "finalists": 3,
+    "goal0": {
+      "allow_model_microbenchmark_without_explicit_run": false,
+      "hash_large_dataset_payloads": false,
+      "source_check_timeout_seconds": 300
+    },
+    "lolo_starts": 5,
+    "max_cpu_hours_per_goal": 12,
+    "max_wall_hours_per_goal": 6,
+    "max_workers": 8,
+    "mc0_samples": 32,
+    "mc1_samples": 128,
+    "mc2_samples": 512,
+    "screening_max_structures": 32,
+    "screening_starts": 3
+  },
+  "configuration_hash": "44e1dea0d94c5f3525fc68c5e354a43352bb297b827babd742ff89cf9c4a37bd",
+  "goal": "G0",
+  "goal_start_sha": "3b46c9361d68b2fa37fabbedbbbf01338bd89db9",
+  "output_run_id": "G0_20260718T071117Z_b56b8ac9",
+  "schema_version": 1,
+  "source_contract": {
+    "bundle_required_files": [
+      "AGENTS.md",
+      "README_BUNDLE.md",
+      "docs/article3_multiscale/00_PROJECT_CHARTER.md",
+      "docs/article3_multiscale/01_SCIENTIFIC_CONTRACT.md",
+      "docs/article3_multiscale/02_DATASET_REGISTRY.md",
+      "docs/article3_multiscale/03_PARAMETER_REGISTRY.md",
+      "docs/article3_multiscale/04_GOAL_ROADMAP.md",
+      "docs/article3_multiscale/05_GATE_SPECIFICATION.md",
+      "docs/article3_multiscale/06_VISUAL_QC_STANDARD.md",
+      "docs/article3_multiscale/07_COMPUTE_BUDGET.md",
+      "docs/article3_multiscale/08_DECISION_LOG.md",
+      "docs/article3_multiscale/09_CLAIM_EVIDENCE_MATRIX.md",
+      "docs/article3_multiscale/PROMPT_01_CREATE_BRANCH_AND_COMMIT_BUNDLE.md",
+      "docs/article3_multiscale/PROMPT_02_START_DEVELOPMENT_GOAL_0.md"
+    ],
+    "editable_repository": {
+      "allowed_goal_dirty_prefixes": [
+        "WORKFLOW/05_Article3_Multiscale_Transfer/",
+        "RESULT ANALYSIS/ARTICLE3_MULTISCALE_TRANSFER/",
+        "docs/article3_multiscale/"
+      ],
+      "repository": "cltorrealba/Calibration_Framework_2025",
+      "required_branch": "article3-multiscale-transfer-pipeline"
+    },
+    "schema_version": 1,
+    "selected_packages": [
+      "numpy",
+      "pandas",
+      "scipy",
+      "pyomo",
+      "pytest",
+      "jsonschema",
+      "psutil",
+      "matplotlib",
+      "nbformat"
+    ],
+    "sources": [
+      {
+        "env_var": "PYOMO_DOE_ROOT",
+        "index_files": [
+          "fermentation_model/campaigns/experiments.csv",
+          "fermentation_model/campaigns/workflows.csv",
+          "fermentation_model/pilot_2026/data_integration_config.json",
+          "fermentation_model/pilot_2026/adaptive_design/model_dataset_config.json",
+          "fermentation_model/pilot_2026/adaptive_design/campaign_state.json"
+        ],
+        "model_run_manifest_glob": "fermentation_model/pilot_2026/results/adaptive_design_2026/model_dataset/*/run_manifest.json",
+        "name": "pyomo-doe",
+        "repository": "cltorrealba/pyomo-doe",
+        "required_branch": "ctorrealba_fermentation",
+        "required_model_run_files": [
+          "adapter_config.json",
+          "carbon_balance_diagnostic.csv",
+          "co2_observations.csv",
+          "condensate_observations.csv",
+          "dataset_qc.json",
+          "operational_events.csv",
+          "primary_observations.csv",
+          "run_manifest.json",
+          "run_metadata.csv",
+          "temperature_inputs.csv",
+          "wine_aroma_observations.csv"
+        ],
+        "safe_checks": [
+          {
+            "command": [
+              "python",
+              "fermentation_model/tools/campaign_audit.py",
+              "--check-hashes"
+            ],
+            "name": "campaign_audit_hashes"
+          }
+        ],
+        "small_table_smoke_file": "run_metadata.csv"
+      },
+      {
+        "env_var": "DC_DFVB_ROOT",
+        "index_files": [
+          "article/METHODS_EVIDENCE_AND_PARAMETER_REGISTER.md",
+          "article/literature/METHODS_LIBRARY_REQUIREMENTS.md"
+        ],
+        "name": "DC_dFVB_2026",
+        "repository": "cltorrealba/DC_dFVB_2026",
+        "required_branch": "methods-draft",
+        "safe_checks": []
+      },
+      {
+        "env_var": "THESIS_ROOT",
+        "index_files": [],
+        "name": "Tesis",
+        "repository": "cltorrealba/Tesis",
+        "required_branch": "article",
+        "safe_checks": []
+      }
+    ]
+  },
+  "source_run_id": null,
+  "source_run_selection_policy": "exact_explicit_id_only_no_latest"
+}

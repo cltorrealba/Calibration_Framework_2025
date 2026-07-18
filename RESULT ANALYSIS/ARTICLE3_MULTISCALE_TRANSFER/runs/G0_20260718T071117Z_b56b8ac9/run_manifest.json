@@ -1,0 +1,127 @@
+{
+  "commands": [
+    "python -m pytest WORKFLOW/05_Article3_Multiscale_Transfer/tests -q",
+    "python WORKFLOW/05_Article3_Multiscale_Transfer/scripts/00_preflight.py --dry-run --goal-start-sha <goal-start-sha>",
+    "python WORKFLOW/05_Article3_Multiscale_Transfer/scripts/00_preflight.py --goal-start-sha <goal-start-sha>",
+    "python fermentation_model/tools/campaign_audit.py --check-hashes"
+  ],
+  "configuration_hash": "44e1dea0d94c5f3525fc68c5e354a43352bb297b827babd742ff89cf9c4a37bd",
+  "created_utc": "2026-07-18T07:11:07.405605Z",
+  "editable_repository": {
+    "branch": "article3-multiscale-transfer-pipeline",
+    "goal_start_sha": "3b46c9361d68b2fa37fabbedbbbf01338bd89db9",
+    "head_at_generation": "3b46c9361d68b2fa37fabbedbbbf01338bd89db9",
+    "planned_commit_message": "chore(article3): establish multiscale preflight and provenance",
+    "repository": "cltorrealba/Calibration_Framework_2025"
+  },
+  "goal": "G0",
+  "outputs": [
+    {
+      "bytes": 4323,
+      "path": "config/effective_config.json",
+      "sha256": "f321df66f7abe0739497e1540781675ac3b4c236fd651f863e19e60a9e7ef0f6"
+    },
+    {
+      "bytes": 5153,
+      "path": "gate_status.json",
+      "sha256": "da58bf590038798aedb48784b4032026302039f28574fb98ffb659de6ea8fe83"
+    },
+    {
+      "bytes": 354,
+      "path": "logs/commands.log",
+      "sha256": "4ab2a658823982b703ee5598bbd2fff2c494ccc1f9b1a9f27aeabdb143a1f670"
+    },
+    {
+      "bytes": 851,
+      "path": "provenance/environment.json",
+      "sha256": "47f8d5b77ee11e6ad4f85472759a467eccdf4bf8474631996af738dc02c1f44a"
+    },
+    {
+      "bytes": 5314,
+      "path": "provenance/input_hashes.csv",
+      "sha256": "1f6aaa2f0258de3227e30384ac8d2b114cde7fef62ecffeb9c9d0f827e317c2b"
+    },
+    {
+      "bytes": 4104,
+      "path": "provenance/source_manifest.json",
+      "sha256": "a0e6f53514df419ff2fd49e93af1ebb00bc0b191c4739973696d82ecb60a332c"
+    },
+    {
+      "bytes": 2710,
+      "path": "report.md",
+      "sha256": "9950df226b5db66730cc60a305b8a3b5b7399bf1b97e50bd3c7265f2941bdb85"
+    },
+    {
+      "bytes": 2578,
+      "path": "tables/model_run_candidates.csv",
+      "sha256": "459346d0217272b1f4a4a05d53d900aad32c5dd468e92a1bce77d12d37b05779"
+    },
+    {
+      "bytes": 1111,
+      "path": "tables/preflight_checks.csv",
+      "sha256": "011911f3e5d28e1ad2a3042d1b139a80074a6034e50ddb5d0a3a1e29ae0d350a"
+    }
+  ],
+  "random_seeds": [],
+  "run_id": "G0_20260718T071117Z_b56b8ac9",
+  "runtime_seconds": 10.100311,
+  "schema_version": 1,
+  "selected_source_run": null,
+  "solver": {
+    "reason": "Goal 0 has no approved model run",
+    "used": false
+  },
+  "source_commits": {
+    "DC_dFVB_2026": "180d9b4003103dbb5024d7f9d11ae51df2683aca",
+    "Tesis": "adec3a941ba896dbd350fb037b714ebba614c555",
+    "pyomo-doe": "33b55bca93f65129eb22592528a4327d572ea3a5"
+  },
+  "status": "failed",
+  "tests": {
+    "inventory_smoke": {
+      "column_counts": {
+        "20260717T001228Z_ced2c8": 23,
+        "20260717T001546Z_ced2c8": 23,
+        "20260717T002514Z_ced2c8": 23,
+        "20260717T125004Z_b03413": 23
+      },
+      "eligible_tables_checked": 4,
+      "errors": [],
+      "selection_performed": false,
+      "status": "PASS"
+    },
+    "model_microbenchmark": {
+      "calibration_executed": false,
+      "reasons": [
+        "no_explicit_approved_run_id",
+        "source_preflight_not_clean_and_branch_aligned"
+      ],
+      "simulation_executed": false,
+      "status": "SKIPPED_BY_GATE"
+    },
+    "pipeline_pytest": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "status": "PASS",
+      "tests": 11,
+      "time_seconds": 0.333
+    },
+    "schema_validation": {
+      "status": "PASS"
+    },
+    "source_structural_checks": {
+      "checks": {
+        "pyomo-doe:campaign_audit_hashes": {
+          "return_code": 1,
+          "runtime_seconds": 0.431502,
+          "source_state_unchanged": true,
+          "status": "FAIL",
+          "stderr_tail": "",
+          "stdout_tail": "etic_glucose_rich_fructose_pulse/Temp_F1_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/CO2_F2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/CO2_F2_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/CO2_FILT_F2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/CO2_FILT_F2_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/Temp_F2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/Temp_F2_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/CO2_F3.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/CO2_F3_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/CO2_FILT_F3.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/CO2_FILT_F3_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/Temp_F3.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/Temp_F3_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Piloto 2026/Lotes1a3/Resultados_GC.csv\"\n  ],\n  \"warnings\": [\n    \"Laboratory 2026 Lot 3 raw folder is not present\"\n  ]\n}\n"
+        }
+      },
+      "status": "FAIL"
+    }
+  }
+}

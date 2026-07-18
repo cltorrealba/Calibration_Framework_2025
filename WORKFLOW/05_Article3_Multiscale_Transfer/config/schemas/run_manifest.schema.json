@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/article3/run_manifest.schema.json",
+  "title": "Article 3 run manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "goal",
+    "created_utc",
+    "status",
+    "editable_repository",
+    "source_commits",
+    "configuration_hash",
+    "random_seeds",
+    "commands",
+    "tests",
+    "runtime_seconds",
+    "outputs"
+  ],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "goal": {"type": "string", "minLength": 1},
+    "created_utc": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["completed", "completed_conditionally", "failed"]},
+    "editable_repository": {"type": "object"},
+    "source_commits": {"type": "object"},
+    "configuration_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "random_seeds": {"type": "array", "items": {"type": "integer"}},
+    "commands": {"type": "array", "items": {"type": "string"}},
+    "tests": {"type": "object"},
+    "runtime_seconds": {"type": "number", "minimum": 0},
+    "outputs": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

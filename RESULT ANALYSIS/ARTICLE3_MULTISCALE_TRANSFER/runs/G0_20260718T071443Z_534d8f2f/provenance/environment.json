@@ -1,0 +1,38 @@
+{
+  "executables": {
+    "git": "git version 2.48.1.windows.1",
+    "ipopt_available": true
+  },
+  "hardware": {
+    "logical_cpu_count": 12,
+    "processor": "Intel64 Family 6 Model 186 Stepping 3, GenuineIntel",
+    "total_memory_bytes": 16849256448
+  },
+  "operating_system": {
+    "machine": "AMD64",
+    "release": "11",
+    "system": "Windows",
+    "version": "10.0.22631"
+  },
+  "packages": {
+    "jsonschema": "4.23.0",
+    "matplotlib": "3.9.2",
+    "nbformat": "5.10.4",
+    "numpy": "1.26.4",
+    "pandas": "2.2.2",
+    "psutil": "5.9.0",
+    "pyomo": "6.10.0",
+    "pytest": "9.0.2",
+    "scipy": "1.13.1"
+  },
+  "python": {
+    "executable_name": "python.exe",
+    "implementation": "CPython",
+    "version": "3.12.3"
+  },
+  "thread_limits": {
+    "MKL_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "max_cpu_hours_per_goal": 12,
+  "max_wall_hours_per_goal": 6,
+  "max_workers": 8,
+  "blas_threads_per_worker": 1,
+  "mc0_samples": 32,
+  "mc1_samples": 128,
+  "mc2_samples": 512,
+  "screening_max_structures": 32,
+  "screening_starts": 3,
+  "finalists": 3,
+  "lolo_starts": 5,
+  "bootstrap_replicates": 0,
+  "goal0": {
+    "allow_model_microbenchmark_without_explicit_run": false,
+    "hash_large_dataset_payloads": false,
+    "source_check_timeout_seconds": 300
+  }
+}

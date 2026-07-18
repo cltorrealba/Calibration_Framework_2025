@@ -1,0 +1,90 @@
+{
+  "created_utc": "2026-07-18T07:11:07.405605Z",
+  "editable_repository": {
+    "current_branch": "article3-multiscale-transfer-pipeline",
+    "current_head": "3b46c9361d68b2fa37fabbedbbbf01338bd89db9",
+    "goal_start_sha": "3b46c9361d68b2fa37fabbedbbbf01338bd89db9",
+    "in_scope_goal_changes": [
+      "RESULT ANALYSIS/ARTICLE3_MULTISCALE_TRANSFER/README.md",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/.gitignore",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/README.md",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/config/compute_budget.json",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/config/schemas/gate_status.schema.json",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/config/schemas/run_manifest.schema.json",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/config/schemas/source_manifest.schema.json",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/config/sources.template.json",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/pyproject.toml",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/scripts/00_preflight.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/src/article3_multiscale/__init__.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/src/article3_multiscale/environment.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/src/article3_multiscale/gate.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/src/article3_multiscale/provenance.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/src/article3_multiscale/run_layout.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/src/article3_multiscale/source_discovery.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/tests/test_gate_schema.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/tests/test_provenance.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/tests/test_run_layout.py",
+      "WORKFLOW/05_Article3_Multiscale_Transfer/tests/test_source_discovery.py"
+    ],
+    "repository": "cltorrealba/Calibration_Framework_2025",
+    "required_branch": "article3-multiscale-transfer-pipeline",
+    "root_locator": ".",
+    "unexpected_dirty_paths": []
+  },
+  "schema_version": 1,
+  "sources": [
+    {
+      "ahead_of_remote": 2,
+      "behind_remote": 0,
+      "branch_matches_required": true,
+      "changed_paths": [],
+      "current_branch": "ctorrealba_fermentation",
+      "current_head": "33b55bca93f65129eb22592528a4327d572ea3a5",
+      "dirty": false,
+      "name": "pyomo-doe",
+      "remote": "https://github.com/cltorrealba/pyomo-doe.git",
+      "repository": "cltorrealba/pyomo-doe",
+      "required_branch": "ctorrealba_fermentation",
+      "required_ref_accessible": true,
+      "required_sha": "33b55bca93f65129eb22592528a4327d572ea3a5",
+      "resolution_method": "environment:PYOMO_DOE_ROOT",
+      "root_locator": "${PYOMO_DOE_ROOT}"
+    },
+    {
+      "ahead_of_remote": 0,
+      "behind_remote": 0,
+      "branch_matches_required": false,
+      "changed_paths": [],
+      "current_branch": "agent/paper3-article-bundle",
+      "current_head": "c15394fcbded138b7548dca7d0c9339a2102dcb3",
+      "dirty": false,
+      "name": "DC_dFVB_2026",
+      "remote": "https://github.com/cltorrealba/DC_dFVB_2026.git",
+      "repository": "cltorrealba/DC_dFVB_2026",
+      "required_branch": "methods-draft",
+      "required_ref_accessible": true,
+      "required_sha": "180d9b4003103dbb5024d7f9d11ae51df2683aca",
+      "resolution_method": "environment:DC_DFVB_ROOT",
+      "root_locator": "${DC_DFVB_ROOT}"
+    },
+    {
+      "ahead_of_remote": 0,
+      "behind_remote": 0,
+      "branch_matches_required": true,
+      "changed_paths": [
+        "references/library.bib"
+      ],
+      "current_branch": "article",
+      "current_head": "adec3a941ba896dbd350fb037b714ebba614c555",
+      "dirty": true,
+      "name": "Tesis",
+      "remote": "https://github.com/cltorrealba/Tesis.git",
+      "repository": "cltorrealba/Tesis",
+      "required_branch": "article",
+      "required_ref_accessible": true,
+      "required_sha": "adec3a941ba896dbd350fb037b714ebba614c555",
+      "resolution_method": "environment:THESIS_ROOT",
+      "root_locator": "${THESIS_ROOT}"
+    }
+  ]
+}

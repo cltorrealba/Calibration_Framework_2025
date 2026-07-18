@@ -1,0 +1,93 @@
+{
+  "blockers": [
+    "failure:a read-only source structural check failed or changed source state",
+    "model_microbenchmark_not_available",
+    "model_run_selection_required",
+    "source_branch_mismatch:DC_dFVB_2026",
+    "source_dirty:Tesis"
+  ],
+  "commands": [
+    "python -m pytest WORKFLOW/05_Article3_Multiscale_Transfer/tests -q",
+    "python WORKFLOW/05_Article3_Multiscale_Transfer/scripts/00_preflight.py --dry-run --goal-start-sha <goal-start-sha>",
+    "python WORKFLOW/05_Article3_Multiscale_Transfer/scripts/00_preflight.py --goal-start-sha <goal-start-sha>",
+    "python fermentation_model/tools/campaign_audit.py --check-hashes"
+  ],
+  "conditions": [
+    "4 eligible Pilot 2026 model-ready runs were found; none was selected.",
+    "Model microbenchmark was not executed because its explicit-run and clean-source preconditions were not met.",
+    "Source DC_dFVB_2026 checkout is `agent/paper3-article-bundle`, while `methods-draft` is required and resolves without checkout.",
+    "Source Tesis is dirty: references/library.bib."
+  ],
+  "decisions_required": [
+    "Approve one exact Pilot 2026 model-dataset run ID; do not approve `latest`."
+  ],
+  "eligible_next_goals": [],
+  "figures": [],
+  "gate_id": "G00",
+  "goal": "Preflight and provenance",
+  "input_hashes": {
+    "configuration": "44e1dea0d94c5f3525fc68c5e354a43352bb297b827babd742ff89cf9c4a37bd",
+    "input_hash_index": "74f8c3861292c9ce321e051f54519a2e92a3c1da214467184a32fd4a28c2a27d"
+  },
+  "metrics": {
+    "eligible_model_run_candidates": 4,
+    "large_dataset_payloads_hashed": 0,
+    "model_run_candidates": 5,
+    "selected_model_run": null,
+    "sources_expected": 3,
+    "sources_resolved": 3
+  },
+  "source_commits": {
+    "DC_dFVB_2026": "180d9b4003103dbb5024d7f9d11ae51df2683aca",
+    "Tesis": "adec3a941ba896dbd350fb037b714ebba614c555",
+    "pyomo-doe": "33b55bca93f65129eb22592528a4327d572ea3a5"
+  },
+  "status": "FAIL",
+  "tests": {
+    "inventory_smoke": {
+      "column_counts": {
+        "20260717T001228Z_ced2c8": 23,
+        "20260717T001546Z_ced2c8": 23,
+        "20260717T002514Z_ced2c8": 23,
+        "20260717T125004Z_b03413": 23
+      },
+      "eligible_tables_checked": 4,
+      "errors": [],
+      "selection_performed": false,
+      "status": "PASS"
+    },
+    "model_microbenchmark": {
+      "calibration_executed": false,
+      "reasons": [
+        "no_explicit_approved_run_id",
+        "source_preflight_not_clean_and_branch_aligned"
+      ],
+      "simulation_executed": false,
+      "status": "SKIPPED_BY_GATE"
+    },
+    "pipeline_pytest": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "status": "PASS",
+      "tests": 11,
+      "time_seconds": 0.333
+    },
+    "schema_validation": {
+      "status": "PASS"
+    },
+    "source_structural_checks": {
+      "checks": {
+        "pyomo-doe:campaign_audit_hashes": {
+          "return_code": 1,
+          "runtime_seconds": 0.431502,
+          "source_state_unchanged": true,
+          "status": "FAIL",
+          "stderr_tail": "",
+          "stdout_tail": "etic_glucose_rich_fructose_pulse/Temp_F1_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/CO2_F2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/CO2_F2_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/CO2_FILT_F2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/CO2_FILT_F2_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/Temp_F2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F05_F2_Lot2_synthetic_lit_SM410_24C_highN_strip/Temp_F2_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/CO2_F3.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/CO2_F3_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/CO2_FILT_F3.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/CO2_FILT_F3_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/Temp_F3.csv\",\n    \"raw file size changed: fermentation_model/data/Laboratorio 2026/DOE_Lote_2/DOE26-F06_F3_Lot2_synthetic_viable_biomass_step/Temp_F3_pt2.csv\",\n    \"raw file size changed: fermentation_model/data/Piloto 2026/Lotes1a3/Resultados_GC.csv\"\n  ],\n  \"warnings\": [\n    \"Laboratory 2026 Lot 3 raw folder is not present\"\n  ]\n}\n"
+        }
+      },
+      "status": "FAIL"
+    }
+  }
+}
